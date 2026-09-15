@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Submit a relief request — FloodRelief Connect{% endblock %}
+{% block description %}File a flood relief request in about ninety seconds. No account needed — you get a reference number and a timestamped timeline.{% endblock %}
+
+{% block stylesheets %}
+  <link rel="stylesheet" href="{% static 'css/form.css' %}">
+{% endblock %}
+
+{% block content %}
+<section class="submit">
+  <div class="submit__grid">
+
+    {# ── The form ─────────────────────────────────────────────────────── #}
+    <div class="submit__main">
+      <header class="submit__head">
+        <p class="eyebrow" data-reveal>
+          <span class="eyebrow__rule" aria-hidden="true"></span>
+          New request
+        </p>
+        <h1 class="submit__title" data-reveal style="--i: 1">
+          Tell us what you need,<br> and <em>where</em>.
+        </h1>
+        <p class="submit__lede" data-reveal style="--i: 2">
+          Seven fields. No account. The moment you send this it gets a reference number
+          and enters the board at <strong>Received</strong> — visible to every
+          verified responder working this flood.
+        </p>
+      </header>
+
+      <form class="reqform"
+            method="post"
+            action="{% url 'requests:create' %}"
+            novalidate
+            data-reqform
+            data-reveal
+            style="--i: 3">
+        {% csrf_token %}
+
+        {% if form.non_field_errors %}
+          <div class="reqform__alert" role="alert">
+            {% for error in form.non_field_errors %}<p>{{ error }}</p>{% endfor %}
+          </div>
+        {% endif %}
+
+        <fieldset class="reqform__block">
+          <legend class="reqform__legend"><span class="mono">01</span> Who we're reaching</legend>
+          <div class="reqform__row reqform__row--two">
+            {% include "partials/field.html" with field=form.contact_name %}
+            {% include "partials/field.html" with field=form.contact_phone %}
+          </div>
+        </fieldset>
+
+        <fieldset class="reqform__block">
+          <legend class="reqform__legend"><span class="mono">02</span> What is needed</legend>
+          <div class="reqform__row reqform__row--split">
+            {% include "partials/field.html" with field=form.category %}
+            {% include "partials/field.html" with field=form.people_affected %}
+          </div>
+
+          <div class="field{% if form.urgency.errors %} field--error{% endif %}">
+            <span class="field__label" id="urgency-label">
+              <span>{{ form.urgency.label }}</span>
+              <span class="field__required">required</span>
+            </span>
+            <div class="segmented" role="radiogroup" aria-labelledby="urgency-label">
+              {% for radio in form.urgency %}
+                <label class="segmented__option" data-urgency="{{ radio.data.value }}">
+                  {{ radio.tag }}
+                  <span class="segmented__text">{{ radio.choice_label }}</span>
+                </label>
+              {% endfor %}
+            </div>
+            {% for error in form.urgency.errors %}
+              <p class="field__error" role="alert">{{ error }}</p>
+            {% endfor %}
+          </div>
+        </fieldset>
+
+        <fieldset class="reqform__block">
+          <legend class="reqform__legend"><span class="mono">03</span> Where, and what's happening</legend>
+          {% include "partials/field.html" with field=form.location %}
+          {% include "partials/field.html" with field=form.description %}
+        </fieldset>
+
+        <div class="reqform__submit">
+          <button class="btn btn--accent btn--large btn--submit" type="submit" data-submit>
+            <span class="btn__sweep" aria-hidden="true"></span>
+            <span class="btn__label">Send this request</span>
+            <span class="btn__arrow" aria-hidden="true">→</span>
+          </button>
+          <p class="reqform__note">
+            Sent at the second you press this. You'll see the timestamp on the next screen.
+          </p>
+        </div>
+
+        <p class="reqform__status mono" role="status" aria-live="polite" data-form-status></p>
+      </form>
+    </div>
+
+    {# ── What happens next ────────────────────────────────────────────── #}
+    <aside class="nextup" aria-label="What happens after you submit">
+      <div class="nextup__sticky">
+        <h2 class="nextup__title">What happens next</h2>
+        <ol class="nextup__steps">
+          {% for stage in stages %}
+            <li class="nextup__step {% if forloop.first %}is-first{% endif %}"
+                data-status="{{ stage.status }}"
+                style="--i: {{ forloop.counter0 }}"
+                data-reveal>
+              <span class="nextup__node" aria-hidden="true"></span>
+              <span class="nextup__label">{{ stage.label }}</span>
+            </li>
+          {% endfor %}
+        </ol>
+        <p class="nextup__note">
+          Your request enters at <strong>Received</strong>. Our target is to move it
+          past that within <strong>two hours</strong> — and the clock is public.
+        </p>
+        <p class="nextup__ref mono">Keep your FRC-reference. It's how you track this.</p>
+      </div>
+    </aside>
+
+  </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+  <script src="{% static 'js/form.js' %}" defer></script>
+{% endblock %}

@@ -1,0 +1,26 @@
+{% load static %}
+<header class="masthead" data-masthead>
+  <div class="masthead__inner">
+    <a class="brand" href="{% url 'dashboard:landing' %}">
+      <span class="brand__mark" aria-hidden="true">
+        <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path class="brand__wave brand__wave--1" d="M1 11c3.6 0 3.6 3.2 7.2 3.2S11.8 11 15.4 11s3.6 3.2 7.2 3.2S26.2 11 29.8 11"/>
+          <path class="brand__wave brand__wave--2" d="M1 18c3.6 0 3.6 3.2 7.2 3.2S11.8 18 15.4 18s3.6 3.2 7.2 3.2S26.2 18 29.8 18"/>
+          <path class="brand__wave brand__wave--3" d="M1 25c3.6 0 3.6 3.2 7.2 3.2S11.8 25 15.4 25s3.6 3.2 7.2 3.2S26.2 25 29.8 25"/>
+        </svg>
+      </span>
+      <span class="brand__text">FloodRelief<span class="brand__text-accent">Connect</span></span>
+    </a>
+
+    <nav class="masthead__nav" aria-label="Primary">
+      <a href="{% url 'dashboard:landing' %}#problem" class="masthead__link">The problem</a>
+      <a href="{% url 'dashboard:landing' %}#lifecycle" class="masthead__link">Lifecycle</a>
+      <a href="{% url 'requests:list' %}" class="masthead__link {% if page_id == 'board' %}is-current{% endif %}">Live board</a>
+    </nav>
+
+    <a class="btn btn--accent btn--compact" href="{% url 'requests:create' %}">
+      Submit a request
+      <span class="btn__arrow" aria-hidden="true">→</span>
+    </a>
+  </div>
+</header>

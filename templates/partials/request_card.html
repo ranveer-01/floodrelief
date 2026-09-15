@@ -1,0 +1,79 @@
+{% load humanize %}
+{% comment %}
+One request on the board. Expects: relief_request, forloop counter via `index`,
+and `is_new` when this row was just submitted.
+{% endcomment %}
+<article class="req-card{% if is_new %} is-new{% endif %}"
+         id="req-{{ relief_request.pk }}"
+         data-status="{{ relief_request.status }}"
+         data-urgency="{{ relief_request.urgency }}"
+         data-reveal
+         style="--i: {{ index|default:0 }}">
+
+  {% if is_new %}
+    <p class="req-card__flag">Just submitted</p>
+  {% endif %}
+
+  <header class="req-card__head">
+    <div class="req-card__ids">
+      <span class="req-card__ref">{{ relief_request.reference }}</span>
+      <span class="req-card__urgency" data-urgency="{{ relief_request.urgency }}">
+        {{ relief_request.get_urgency_display }}
+      </span>
+    </div>
+    {% include "partials/status_badge.html" with status=relief_request.status label=relief_request.get_status_display %}
+  </header>
+
+  <h3 class="req-card__title">{{ relief_request.get_category_display }}</h3>
+
+  <p class="req-card__where">
+    <span aria-hidden="true">◈</span> {{ relief_request.location }}
+  </p>
+
+  <p class="req-card__desc">{{ relief_request.description }}</p>
+
+  <dl class="req-card__meta">
+    <div class="req-card__metric">
+      <dt>People</dt>
+      <dd class="mono">{{ relief_request.people_affected|intcomma }}</dd>
+    </div>
+    <div class="req-card__metric">
+      <dt>Submitted</dt>
+      <dd>
+        <time class="mono" datetime="{{ relief_request.submitted_at|date:'c' }}" data-relative>
+          {{ relief_request.submitted_at|date:"d M Y · H:i:s" }}
+        </time>
+      </dd>
+    </div>
+    <div class="req-card__metric req-card__metric--ack"
+         data-state="{% if relief_request.acknowledged_at %}{% if relief_request.acknowledged_within_target %}good{% else %}late{% endif %}{% elif relief_request.is_overdue %}overdue{% else %}waiting{% endif %}">
+      <dt>Time to acknowledgement</dt>
+      <dd class="mono">{{ relief_request.acknowledgement_display }}</dd>
+    </div>
+  </dl>
+
+  {% include "partials/tracker.html" with relief_request=relief_request compact=True %}
+
+  <details class="trail">
+    <summary class="trail__summary">
+      <span>Audit trail</span>
+      <span class="trail__count mono">{{ relief_request.events.all|length }} event{{ relief_request.events.all|length|pluralize }}</span>
+    </summary>
+    <ul class="trail__list">
+      {% for event in relief_request.events.all %}
+        <li class="trail__item">
+          <time class="trail__time mono" datetime="{{ event.changed_at|date:'c' }}">
+            {{ event.changed_at|date:"d M Y · H:i:s" }}
+          </time>
+          <span class="trail__move">
+            {% if event.from_status %}{{ event.get_from_status_display }} →{% endif %}
+            <strong>{{ event.get_to_status_display }}</strong>
+          </span>
+          <span class="trail__who">
+            {% if event.changed_by %}{{ event.changed_by.name }}{% else %}system{% endif %}
+          </span>
+        </li>
+      {% endfor %}
+    </ul>
+  </details>
+</article>

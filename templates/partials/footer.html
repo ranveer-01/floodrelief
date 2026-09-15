@@ -1,0 +1,39 @@
+{% load static %}
+<footer class="colophon">
+  <div class="colophon__inner">
+    <div class="colophon__lead">
+      <p class="colophon__statement">
+        Every request gets a number.<br>
+        Every hand-over gets a timestamp.
+      </p>
+      <a class="btn btn--ghost" href="{% url 'requests:create' %}">
+        Submit a request <span class="btn__arrow" aria-hidden="true">→</span>
+      </a>
+    </div>
+
+    <div class="colophon__cols">
+      <div class="colophon__col">
+        <h2 class="colophon__heading">Platform</h2>
+        <a href="{% url 'dashboard:landing' %}">Home</a>
+        <a href="{% url 'requests:list' %}">Live board</a>
+        <a href="{% url 'requests:create' %}">Submit a request</a>
+        <a href="/admin/">Coordination desk</a>
+      </div>
+      <div class="colophon__col">
+        <h2 class="colophon__heading">Lifecycle</h2>
+        <p class="colophon__mono">Received → Verified → Assigned → In&nbsp;progress → Delivered → Closed</p>
+      </div>
+      <div class="colophon__col">
+        <h2 class="colophon__heading">Built by</h2>
+        <p>Ranveer Singh</p>
+        <p>Manshaan Singh</p>
+        <p class="colophon__note">Academic project — FloodRelief Connect. Demo data is fictional.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="colophon__baseline">
+    <p>&copy; {% now "Y" %} FloodRelief Connect</p>
+    <p class="colophon__mono">Target time-to-acknowledgement &lt; 2 hours</p>
+  </div>
+</footer>

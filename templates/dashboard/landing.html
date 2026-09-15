@@ -1,0 +1,263 @@
+{% extends "base.html" %}
+{% load static humanize request_extras %}
+
+{% block title %}FloodRelief Connect — one record per request, from Received to Closed{% endblock %}
+
+{% block stylesheets %}
+  <link rel="stylesheet" href="{% static 'css/landing.css' %}">
+{% endblock %}
+
+{% block content %}
+
+{# ── Hero ─────────────────────────────────────────────────────────────── #}
+<section class="hero">
+  <div class="hero__media" aria-hidden="true"></div>
+  <div class="hero__scrim" aria-hidden="true"></div>
+
+  <div class="hero__grid">
+    <div class="hero__copy">
+      <p class="eyebrow eyebrow--light" data-reveal>
+        <span class="eyebrow__rule" aria-hidden="true"></span>
+        Flood relief coordination
+      </p>
+
+      <h1 class="hero__title" data-reveal style="--i: 1">
+        When the water rises,<br>
+        the <em>asking</em> scatters.
+      </h1>
+
+      <p class="hero__lede" data-reveal style="--i: 2">
+        One family asks four times — a phone call, a paper form, two WhatsApp groups —
+        and gets counted zero times. Donors can't tell which requests are real.
+        FloodRelief Connect gives every request <strong>one reference number</strong> and
+        <strong>one timestamped timeline</strong>, from Received to Closed.
+      </p>
+
+      <div class="hero__actions" data-reveal style="--i: 3">
+        <a class="btn btn--accent btn--large" href="{% url 'requests:create' %}">
+          Submit a request
+          <span class="btn__arrow" aria-hidden="true">→</span>
+        </a>
+        <a class="btn btn--outline btn--large" href="{% url 'requests:list' %}">
+          Open the live board
+        </a>
+      </div>
+    </div>
+
+    {# Live ledger rail — real rows from the database, not a mock-up. #}
+    <aside class="ledger" data-reveal style="--i: 4" aria-label="Most recent requests">
+      <header class="ledger__head">
+        <span class="ledger__pulse" aria-hidden="true"></span>
+        <h2 class="ledger__title">Latest on the board</h2>
+      </header>
+
+      {% if recent_requests %}
+        <ul class="ledger__list">
+          {% for relief_request in recent_requests %}
+            <li class="ledger__row" style="--i: {{ forloop.counter0 }}">
+              <span class="ledger__ref mono">{{ relief_request.reference }}</span>
+              <span class="ledger__where">{{ relief_request.location|truncatechars:34 }}</span>
+              <span class="ledger__foot">
+                {% include "partials/status_badge.html" with status=relief_request.status label=relief_request.get_status_display %}
+                <time class="ledger__time mono"
+                      datetime="{{ relief_request.submitted_at|date:'c' }}"
+                      data-relative>{{ relief_request.submitted_at|date:"H:i" }}</time>
+              </span>
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p class="ledger__empty">
+          The board is empty. The next request filed will appear here with its
+          reference number and the second it arrived.
+        </p>
+      {% endif %}
+
+      <a class="ledger__more" href="{% url 'requests:list' %}">
+        All requests <span aria-hidden="true">→</span>
+      </a>
+    </aside>
+  </div>
+
+  {# Headline numbers, straight from the request table. #}
+  <dl class="hero__stats">
+    <div class="stat" data-reveal style="--i: 0">
+      <dt class="stat__label">Requests logged</dt>
+      <dd class="stat__value mono" data-count="{{ stats.total }}">{{ stats.total }}</dd>
+    </div>
+    <div class="stat" data-reveal style="--i: 1">
+      <dt class="stat__label">Median time to acknowledgement</dt>
+      <dd class="stat__value mono">{{ stats.median_minutes|minutes }}</dd>
+    </div>
+    <div class="stat" data-reveal style="--i: 2">
+      <dt class="stat__label">Acknowledged under {{ stats.target_hours }}h</dt>
+      <dd class="stat__value mono">
+        {% if stats.within_target_pct is not None %}
+          <span data-count="{{ stats.within_target_pct }}">{{ stats.within_target_pct }}</span>%
+        {% else %}—{% endif %}
+      </dd>
+    </div>
+    <div class="stat {% if stats.breaching %}stat--alert{% endif %}" data-reveal style="--i: 3">
+      <dt class="stat__label">Awaiting acknowledgement</dt>
+      <dd class="stat__value mono" data-count="{{ stats.awaiting }}">{{ stats.awaiting }}</dd>
+    </div>
+  </dl>
+</section>
+
+{# ── 01 The problem ───────────────────────────────────────────────────── #}
+<section class="problem" id="problem">
+  <div class="problem__grid">
+    <p class="section-index" data-reveal><span class="mono">01</span> The problem</p>
+
+    <div class="problem__body">
+      <h2 class="section-title" data-reveal>
+        Relief work is drowning<br> in <em>duplicates</em>.
+      </h2>
+
+      <p class="problem__para" data-reveal style="--i: 1">
+        When a district floods, requests arrive everywhere at once — helpline calls,
+        forms, group chats, a councillor's inbox. None of those channels talk to each
+        other, so the same household is logged again and again while another is never
+        logged at all.
+      </p>
+      <p class="problem__para" data-reveal style="--i: 2">
+        The cost isn't paperwork. It is a truck sent twice to one address and never to
+        the next street, a donor who can't prove where their money went, and a family
+        that keeps re-explaining an emergency to a new stranger every hour.
+      </p>
+
+      <p class="problem__pull" data-reveal style="--i: 3">
+        The fix isn't more channels.<br>
+        It's <em>one record</em> that everybody writes to.
+      </p>
+    </div>
+
+    {# Four scattered slips collapsing into one record — animates on scroll. #}
+    <figure class="collapse" data-collapse data-reveal aria-hidden="true">
+      <div class="collapse__stack">
+        <div class="collapse__slip" style="--i: 0"><span class="mono">21:04</span> Helpline call</div>
+        <div class="collapse__slip" style="--i: 1"><span class="mono">21:19</span> Paper form</div>
+        <div class="collapse__slip" style="--i: 2"><span class="mono">22:40</span> WhatsApp group</div>
+        <div class="collapse__slip" style="--i: 3"><span class="mono">23:12</span> Councillor's inbox</div>
+      </div>
+      <div class="collapse__record">
+        <span class="collapse__ref mono">FRC-7K2-QD4</span>
+        <span class="collapse__label">One request · one timeline</span>
+      </div>
+      <figcaption class="collapse__caption">
+        Four submissions. One household. Today that's four rows — or none.
+      </figcaption>
+    </figure>
+  </div>
+</section>
+
+{# ── 02 The lifecycle ─────────────────────────────────────────────────── #}
+<section class="lifecycle" id="lifecycle">
+  <div class="lifecycle__media" aria-hidden="true"></div>
+
+  <div class="lifecycle__inner">
+    <header class="lifecycle__head">
+      <p class="section-index section-index--light" data-reveal><span class="mono">02</span> The spine</p>
+      <h2 class="section-title section-title--light" data-reveal style="--i: 1">
+        Six states.<br> Every hop <em>timestamped</em>.
+      </h2>
+      <p class="lifecycle__lede" data-reveal style="--i: 2">
+        A request is never just "pending". It sits in exactly one state, and every move
+        between states is written down with who moved it and when. That is what makes
+        the board answerable to the people waiting on it.
+      </p>
+    </header>
+
+    <ol class="rail" data-rail aria-label="Request lifecycle">
+      {% for stage in lifecycle %}
+        <li class="rail__stage" data-status="{{ stage.status }}" style="--i: {{ forloop.counter0 }}" data-reveal>
+          <span class="rail__index mono">{{ stage.index }}</span>
+          <span class="rail__node" aria-hidden="true"></span>
+          <h3 class="rail__label">{{ stage.label }}</h3>
+          <p class="rail__caption">{{ stage.caption }}</p>
+        </li>
+      {% endfor %}
+    </ol>
+
+    <aside class="target" data-reveal>
+      <p class="target__label">Primary metric</p>
+      <p class="target__headline">
+        Time from <span class="mono">Received</span> to the first move —
+        target <strong>under {{ stats.target_hours }} hours</strong>.
+      </p>
+      <p class="target__now">
+        Right now the median is
+        <strong class="mono">{{ stats.median_minutes|minutes }}</strong>
+        across {{ stats.acknowledged }} acknowledged request{{ stats.acknowledged|pluralize }}{% if stats.breaching %},
+        with <strong class="mono">{{ stats.breaching }}</strong> past the target{% endif %}.
+      </p>
+    </aside>
+  </div>
+</section>
+
+{# ── 03 Who it's for ──────────────────────────────────────────────────── #}
+<section class="roles">
+  <div class="roles__grid">
+    <p class="section-index" data-reveal><span class="mono">03</span> Who it's for</p>
+    <h2 class="section-title roles__title" data-reveal>
+      Four people, one <em>shared</em> record.
+    </h2>
+
+    <ul class="roles__list">
+      <li class="role-card" data-reveal style="--i: 0">
+        <span class="role-card__num mono">01</span>
+        <h3 class="role-card__name">Victim</h3>
+        <p class="role-card__copy">
+          Files once, gets a reference number, and can check the state of their own
+          request without calling anyone back.
+        </p>
+      </li>
+      <li class="role-card" data-reveal style="--i: 1">
+        <span class="role-card__num mono">02</span>
+        <h3 class="role-card__name">Donor</h3>
+        <p class="role-card__copy">
+          Sees verified needs instead of forwarded screenshots, and can follow a
+          contribution through to a delivery timestamp.
+        </p>
+      </li>
+      <li class="role-card" data-reveal style="--i: 2">
+        <span class="role-card__num mono">03</span>
+        <h3 class="role-card__name">NGO staff</h3>
+        <p class="role-card__copy">
+          Verifies, assigns and marks delivery from one board — so two teams stop
+          driving to the same rooftop.
+        </p>
+      </li>
+      <li class="role-card" data-reveal style="--i: 3">
+        <span class="role-card__num mono">04</span>
+        <h3 class="role-card__name">Administrator</h3>
+        <p class="role-card__copy">
+          Watches the acknowledgement clock across every district and sees where the
+          queue is breaking down.
+        </p>
+      </li>
+    </ul>
+  </div>
+</section>
+
+{# ── Closing CTA ──────────────────────────────────────────────────────── #}
+<section class="closing">
+  <div class="closing__media" aria-hidden="true"></div>
+  <div class="closing__inner">
+    <h2 class="closing__title" data-reveal>
+      Filing takes ninety seconds.<br>
+      The <em>record</em> lasts until it's closed.
+    </h2>
+    <p class="closing__copy" data-reveal style="--i: 1">
+      No account, no app download. A name, a number, a location and what you need.
+    </p>
+    <div class="closing__actions" data-reveal style="--i: 2">
+      <a class="btn btn--accent btn--large" href="{% url 'requests:create' %}">
+        Submit a request <span class="btn__arrow" aria-hidden="true">→</span>
+      </a>
+      <a class="btn btn--outline btn--large" href="{% url 'requests:list' %}">Track existing requests</a>
+    </div>
+  </div>
+</section>
+
+{% endblock %}

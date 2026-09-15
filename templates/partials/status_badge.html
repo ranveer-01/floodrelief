@@ -1,0 +1,8 @@
+{% comment %}
+Animated status badge. Expects: status (value), label.
+The pulse only animates for the live states — a closed request shouldn't blink.
+{% endcomment %}
+<span class="status-badge" data-status="{{ status }}" title="Current lifecycle stage">
+  <span class="status-badge__pulse" aria-hidden="true"></span>
+  <span class="status-badge__label">{{ label }}</span>
+</span>

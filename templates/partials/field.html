@@ -1,0 +1,21 @@
+{% comment %}Single form field. Expects: field.{% endcomment %}
+<div class="field{% if field.errors %} field--error{% endif %}" data-field>
+  <label class="field__label" for="{{ field.id_for_label }}">
+    <span>{{ field.label }}</span>
+    {% if field.field.required %}
+      <span class="field__required">required</span>
+    {% else %}
+      <span class="field__optional">optional</span>
+    {% endif %}
+  </label>
+
+  {{ field }}
+
+  {% if field.help_text %}
+    <p class="field__help" id="{{ field.id_for_label }}_help">{{ field.help_text }}</p>
+  {% endif %}
+
+  {% for error in field.errors %}
+    <p class="field__error" role="alert">{{ error }}</p>
+  {% endfor %}
+</div>
