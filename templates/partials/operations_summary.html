@@ -1,0 +1,13 @@
+{% load request_extras %}
+<section class="workspace-section">
+  <div class="workspace-section__head"><h2>Operations overview</h2><a class="workspace-link" href="{% url 'dashboard:activity' %}?kind=requests&amp;scope=all">Browse operations →</a></div>
+  <div class="workspace-panel stage-summary">
+    <h3>Requests by stage</h3>
+    <dl class="stage-summary__rows">{% for stage in status_counts %}<div><dt>{{ stage.label }}</dt><dd><progress max="{{ summary_total }}" value="{{ stage.count }}" aria-label="{{ stage.label }}: {{ stage.count }} requests"></progress><span class="mono">{{ stage.count }}</span></dd></div>{% endfor %}</dl>
+    <dl class="operations-facts">
+      <div><dt>Median acknowledgement</dt><dd class="mono">{{ stats.median_minutes|minutes }}</dd><span>target &lt; {{ stats.target_hours }} h</span></div>
+      <div><dt>Recipient confirmation coverage</dt><dd class="mono">{% if delivery_stats.coverage is not None %}{{ delivery_stats.coverage }}%{% else %}—{% endif %}</dd><span>{{ delivery_stats.confirmed }} of {{ delivery_stats.completed }} delivered</span></div>
+      <div><dt>Awaiting first action</dt><dd class="mono">{{ stats.awaiting }}</dd><span>{{ stats.breaching }} past the acknowledgement target</span></div>
+    </dl>
+  </div>
+</section>

@@ -86,6 +86,10 @@ class User(AbstractBaseUser, PermissionsMixin):
         default=False,
         help_text="Can sign in to the Django admin / coordination desk.",
     )
+    support_approved = models.BooleanField(
+        default=False,
+        help_text="Allows a donor to browse verified requests and offer support. Set by an administrator.",
+    )
 
     objects = UserManager()
 
@@ -110,3 +114,35 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     def has_role(self, *names):
         return self.role_name in names
+
+    @property
+    def workspace_role(self):
+        return Role.Name.ADMIN if self.is_superuser else self.role_name or Role.Name.VICTIM
+
+    @property
+    def workspace_role_label(self):
+        if self.workspace_role == Role.Name.VICTIM:
+            return "Beneficiary"
+        return dict(Role.Name.choices).get(self.workspace_role, "Your account")
+
+    @property
+    def can_view_accounts(self):
+        return self.is_active and self.is_staff and (
+            self.has_perm("users.view_user") or self.has_perm("users.change_user")
+        )
+
+    @property
+    def can_approve_donors(self):
+        return self.is_active and self.is_staff and self.has_perm("users.change_user")
+
+    @property
+    def can_coordinate(self):
+        return self.is_active and (
+            self.is_superuser or self.has_role(Role.Name.NGO_STAFF, Role.Name.ADMIN)
+        )
+
+    @property
+    def can_support(self):
+        return self.can_coordinate or (
+            self.is_active and self.has_role(Role.Name.DONOR) and self.support_approved
+        )

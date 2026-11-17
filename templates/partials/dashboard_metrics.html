@@ -1,0 +1,10 @@
+{% load request_extras %}
+<dl class="workspace-metrics" aria-label="Dashboard summary">
+  {% for metric in metrics %}
+    <div>
+      <dt>{{ metric.label }}</dt>
+      <dd class="mono">{% if metric.format == 'duration' %}{{ metric.value|minutes }}{% else %}{{ metric.value|default_if_none:'—' }}{% endif %}</dd>
+      {% if metric.url %}<a class="workspace-link" href="{{ metric.url }}">{{ metric.hint }}&nbsp;→</a>{% else %}<span>{{ metric.hint }}</span>{% endif %}
+    </div>
+  {% endfor %}
+</dl>

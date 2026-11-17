@@ -1,0 +1,8 @@
+<article class="request-summary delivery-card" data-status="{{ delivery.request.status }}">
+  <div class="request-summary__top"><a class="mono workspace-link" href="{% url 'requests:detail' delivery.request_id %}">{{ delivery.request.reference }}</a>{% include "partials/status_badge.html" with status=delivery.request.status label=delivery.request.get_status_display %}</div>
+  <h3>{{ delivery.request.get_category_display }}</h3>
+  <p class="delivery-card__description">{{ delivery.donation.description }}</p>
+  <p class="request-summary__location">{% include "partials/icon.html" with name='pin' %}<span>{{ delivery.request.location }}</span></p>
+  <div class="request-summary__foot"><span>{{ delivery.donation.quantity }} {{ delivery.donation.unit }}</span>{% if request.user.can_coordinate %}<span>{{ delivery.responder.name }}</span>{% endif %}</div>
+  <div class="request-summary__action"><time datetime="{{ delivery.assigned_at|date:'c' }}">Assigned {{ delivery.assigned_at|date:'d M Y' }}</time><a href="{% url 'requests:detail' delivery.request_id %}">{% if delivery.request.status == 'delivered' %}View confirmation{% elif request.user.can_support %}Update delivery{% else %}View delivery{% endif %}{% include "partials/icon.html" with name='arrow' %}</a></div>
+</article>

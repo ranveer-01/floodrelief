@@ -27,9 +27,8 @@
       </h1>
 
       <p class="hero__lede" data-reveal style="--i: 2">
-        One family asks four times — a phone call, a paper form, two WhatsApp groups —
-        and gets counted zero times. Donors can't tell which requests are real.
-        FloodRelief Connect gives every request <strong>one reference number</strong> and
+        A single place to request help, offer support and coordinate flood relief.
+        Every request gets <strong>one reference number</strong> and
         <strong>one timestamped timeline</strong>, from Received to Closed.
       </p>
 
@@ -55,8 +54,8 @@
         <ul class="ledger__list">
           {% for relief_request in recent_requests %}
             <li class="ledger__row" style="--i: {{ forloop.counter0 }}">
-              <span class="ledger__ref mono">{{ relief_request.reference }}</span>
-              <span class="ledger__where">{{ relief_request.location|truncatechars:34 }}</span>
+              <a class="ledger__ref mono" href="{% url 'requests:list' %}?q={{ relief_request.reference|urlencode }}#req-{{ relief_request.pk }}" aria-label="View {{ relief_request.reference }} on the live board">{{ relief_request.reference }} <span aria-hidden="true">↗</span></a>
+              <span class="ledger__where">{{ relief_request.public_area|default:'Location shared privately'|truncatechars:34 }}</span>
               <span class="ledger__foot">
                 {% include "partials/status_badge.html" with status=relief_request.status label=relief_request.get_status_display %}
                 <time class="ledger__time mono"
@@ -90,7 +89,7 @@
       <dd class="stat__value mono">{{ stats.median_minutes|minutes }}</dd>
     </div>
     <div class="stat" data-reveal style="--i: 2">
-      <dt class="stat__label">Acknowledged under {{ stats.target_hours }}h</dt>
+      <dt class="stat__label">Acknowledged within {{ stats.target_hours }}h</dt>
       <dd class="stat__value mono">
         {% if stats.within_target_pct is not None %}
           <span data-count="{{ stats.within_target_pct }}">{{ stats.within_target_pct }}</span>%
@@ -182,7 +181,7 @@
     <aside class="target" data-reveal>
       <p class="target__label">Primary metric</p>
       <p class="target__headline">
-        Time from <span class="mono">Received</span> to the first move —
+        Time from <span class="mono">Received</span> to the first staff review —
         target <strong>under {{ stats.target_hours }} hours</strong>.
       </p>
       <p class="target__now">
@@ -206,11 +205,12 @@
     <ul class="roles__list">
       <li class="role-card" data-reveal style="--i: 0">
         <span class="role-card__num mono">01</span>
-        <h3 class="role-card__name">Victim</h3>
+        <h3 class="role-card__name">Beneficiary</h3>
         <p class="role-card__copy">
           Files once, gets a reference number, and can check the state of their own
           request without calling anyone back.
         </p>
+        <a class="role-card__link" href="{% url 'requests:create' %}">Request help <span aria-hidden="true">→</span></a>
       </li>
       <li class="role-card" data-reveal style="--i: 1">
         <span class="role-card__num mono">02</span>
@@ -219,6 +219,7 @@
           Sees verified needs instead of forwarded screenshots, and can follow a
           contribution through to a delivery timestamp.
         </p>
+        <a class="role-card__link" href="{% if request.user.can_support %}{% url 'donations:available' %}{% else %}{% url 'users:register' %}{% endif %}">Offer support <span aria-hidden="true">→</span></a>
       </li>
       <li class="role-card" data-reveal style="--i: 2">
         <span class="role-card__num mono">03</span>
@@ -227,14 +228,16 @@
           Verifies, assigns and marks delivery from one board — so two teams stop
           driving to the same rooftop.
         </p>
+        <a class="role-card__link" href="{% url 'verification:queue' %}">Open review queue <span aria-hidden="true">→</span></a>
       </li>
       <li class="role-card" data-reveal style="--i: 3">
         <span class="role-card__num mono">04</span>
         <h3 class="role-card__name">Administrator</h3>
         <p class="role-card__copy">
-          Watches the acknowledgement clock across every district and sees where the
-          queue is breaking down.
+          Manages accounts and donor approvals, and monitors relief operations
+          and acknowledgement performance.
         </p>
+        <a class="role-card__link" href="{% url 'users:manage_accounts' %}">Accounts &amp; approvals <span aria-hidden="true">→</span></a>
       </li>
     </ul>
   </div>

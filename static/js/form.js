@@ -19,7 +19,9 @@
     var max = parseInt(textarea.getAttribute("maxlength"), 10) || 1200;
     var counter = document.createElement("p");
     counter.className = "field__counter mono";
-    textarea.insertAdjacentElement("afterend", counter);
+    counter.id = textarea.id + "_counter";
+    textarea.closest(".field").appendChild(counter);
+    textarea.setAttribute("aria-describedby", ((textarea.getAttribute("aria-describedby") || "") + " " + counter.id).trim());
 
     var syncCounter = function () {
       var length = textarea.value.trim().length;
@@ -40,12 +42,19 @@
   }
 
   /* ------------------------------------------------- per-field feedback -- */
-  /* Clears the server-rendered error state as soon as the user fixes a field. */
-  Array.prototype.forEach.call(form.querySelectorAll(".field__input"), function (input) {
+  /* Clear courtesy feedback as input changes; keep server errors until review. */
+  Array.prototype.forEach.call(form.querySelectorAll(".field__input, .segmented__input"), function (input) {
     input.addEventListener("input", function () {
       var field = input.closest(".field");
-      if (field && field.classList.contains("field--error") && input.value.trim()) {
+      if (!field) return;
+      var error = field.querySelector("[data-client-error]");
+      if (!error) return;
+      var errorId = error.id;
+      error.remove();
+      input.setAttribute("aria-describedby", (input.getAttribute("aria-describedby") || "").split(/\s+/).filter(function (id) { return id && id !== errorId; }).join(" "));
+      if (!field.querySelector(".field__errors")) {
         field.classList.remove("field--error");
+        input.removeAttribute("aria-invalid");
       }
     });
   });
@@ -53,9 +62,11 @@
   function firstEmptyRequired() {
     var inputs = form.querySelectorAll("[aria-required='true']");
     for (var i = 0; i < inputs.length; i++) {
-      if (!inputs[i].value.trim()) return inputs[i];
+      if (!inputs[i].value.trim() || !inputs[i].validity.valid) return inputs[i];
     }
     if (textarea && textarea.value.trim().length < MIN_DESCRIPTION) return textarea;
+    var urgency = form.querySelector("input[name='urgency']");
+    if (urgency && !form.querySelector("input[name='urgency']:checked")) return urgency;
     return null;
   }
 
@@ -72,12 +83,29 @@
     if (offender) {
       event.preventDefault();
       var field = offender.closest(".field");
-      if (field) field.classList.add("field--error");
+      var message = offender === textarea ? "Add at least " + MIN_DESCRIPTION + " characters about the situation." : offender.type === "radio" ? "Choose how urgent this request is." : offender.validationMessage || "Please fill in this field.";
+      if (field) {
+        field.classList.add("field--error");
+        var error = field.querySelector("[data-client-error]");
+        if (!error) {
+          error = document.createElement("p");
+          error.className = "field__error";
+          error.id = offender.id + "_client_error";
+          error.setAttribute("data-client-error", "");
+          error.setAttribute("role", "alert");
+          field.appendChild(error);
+          offender.setAttribute("aria-describedby", ((offender.getAttribute("aria-describedby") || "") + " " + error.id).trim());
+        }
+        error.textContent = message;
+        offender.setAttribute("aria-invalid", "true");
+      }
+      var details = offender.closest("details");
+      if (details) details.open = true;
       offender.focus({ preventScroll: false });
       if (statusLine) {
         statusLine.textContent = offender === textarea
           ? "Add a little more detail before sending."
-          : "One field still needs filling in.";
+          : "Please check the highlighted field.";
       }
       return;
     }
@@ -99,5 +127,16 @@
                   String(now.getSeconds()).padStart(2, "0");
       statusLine.textContent = "Sent at " + stamp + " — writing it to the board…";
     }
+  });
+
+  window.addEventListener("pageshow", function (event) {
+    if (!event.persisted) return;
+    submitted = false;
+    if (button) {
+      button.classList.remove("is-sending");
+      button.removeAttribute("aria-busy");
+      button.querySelector(".btn__label").textContent = "Send this request";
+    }
+    if (statusLine) statusLine.textContent = "";
   });
 })();

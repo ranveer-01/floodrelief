@@ -23,14 +23,16 @@
           Tell us what you need,<br> and <em>where</em>.
         </h1>
         <p class="submit__lede" data-reveal style="--i: 2">
-          Seven fields. No account. The moment you send this it gets a reference number
-          and enters the board at <strong>Received</strong> — visible to every
-          verified responder working this flood.
+          Share the need, a contact number and where to reach you. Your request
+          gets a reference number and starts at <strong>Received</strong> for staff review.
         </p>
+        <p class="submit__meta">{% include "partials/icon.html" with name='check' %}Seven required fields · Contact details stay private</p>
+        {% if not request.user.is_authenticated %}<p class="submit__account-note"><a href="{% url 'users:login' %}?next={% url 'requests:create' %}">Sign in</a> or <a href="{% url 'users:register' %}">create an account</a> to track this request, respond to reviews and confirm receipt. You can also submit without an account.</p>{% endif %}
       </header>
 
       <form class="reqform"
             method="post"
+            enctype="multipart/form-data"
             action="{% url 'requests:create' %}"
             novalidate
             data-reqform
@@ -38,22 +40,21 @@
             style="--i: 3">
         {% csrf_token %}
 
-        {% if form.non_field_errors %}
-          <div class="reqform__alert" role="alert">
-            {% for error in form.non_field_errors %}<p>{{ error }}</p>{% endfor %}
-          </div>
-        {% endif %}
+        {% include "partials/form_errors.html" %}
 
         <fieldset class="reqform__block">
-          <legend class="reqform__legend"><span class="mono">01</span> Who we're reaching</legend>
+          <legend class="reqform__legend"><span class="mono">01</span><span>Who we're reaching</span></legend>
+          <div class="reqform__fields">
           <div class="reqform__row reqform__row--two">
             {% include "partials/field.html" with field=form.contact_name %}
             {% include "partials/field.html" with field=form.contact_phone %}
           </div>
+          </div>
         </fieldset>
 
         <fieldset class="reqform__block">
-          <legend class="reqform__legend"><span class="mono">02</span> What is needed</legend>
+          <legend class="reqform__legend"><span class="mono">02</span><span>What is needed</span></legend>
+          <div class="reqform__fields">
           <div class="reqform__row reqform__row--split">
             {% include "partials/field.html" with field=form.category %}
             {% include "partials/field.html" with field=form.people_affected %}
@@ -64,7 +65,7 @@
               <span>{{ form.urgency.label }}</span>
               <span class="field__required">required</span>
             </span>
-            <div class="segmented" role="radiogroup" aria-labelledby="urgency-label">
+            <div class="segmented" role="radiogroup" aria-labelledby="urgency-label" {% if form.urgency.errors %}aria-describedby="id_urgency_error"{% endif %}>
               {% for radio in form.urgency %}
                 <label class="segmented__option" data-urgency="{{ radio.data.value }}">
                   {{ radio.tag }}
@@ -72,17 +73,37 @@
                 </label>
               {% endfor %}
             </div>
-            {% for error in form.urgency.errors %}
-              <p class="field__error" role="alert">{{ error }}</p>
-            {% endfor %}
+            {% if form.urgency.errors %}<div class="field__errors" id="id_urgency_error">{% for error in form.urgency.errors %}<p class="field__error" role="alert">{{ error }}</p>{% endfor %}</div>{% endif %}
+          </div>
           </div>
         </fieldset>
 
         <fieldset class="reqform__block">
-          <legend class="reqform__legend"><span class="mono">03</span> Where, and what's happening</legend>
+          <legend class="reqform__legend"><span class="mono">03</span><span>Where, and what's happening</span></legend>
+          <div class="reqform__fields">
           {% include "partials/field.html" with field=form.location %}
           {% include "partials/field.html" with field=form.description %}
+          </div>
         </fieldset>
+
+        <details class="reqform__optional" {% if form.public_area.value or form.latitude.value or form.longitude.value or form.supporting_evidence.value or form.public_area.errors or form.latitude.errors or form.longitude.errors or form.supporting_evidence.errors %}open{% endif %}>
+          <summary class="reqform__optional-summary">
+            {% include "partials/icon.html" with name='plus' %}
+            <span><strong>Add optional information</strong><span>Public area, map coordinates or evidence</span></span>
+            {% include "partials/icon.html" with name='chevron' icon_class='reqform__optional-chevron' %}
+          </summary>
+        <fieldset class="reqform__block">
+          <legend class="visually-hidden">Optional information</legend>
+          <div class="reqform__fields">
+          {% include "partials/field.html" with field=form.public_area %}
+          <div class="reqform__row reqform__row--two">
+            {% include "partials/field.html" with field=form.latitude %}
+            {% include "partials/field.html" with field=form.longitude %}
+          </div>
+          {% include "partials/field.html" with field=form.supporting_evidence %}
+          </div>
+        </fieldset>
+        </details>
 
         <div class="reqform__submit">
           <button class="btn btn--accent btn--large btn--submit" type="submit" data-submit>
@@ -91,7 +112,7 @@
             <span class="btn__arrow" aria-hidden="true">→</span>
           </button>
           <p class="reqform__note">
-            Sent at the second you press this. You'll see the timestamp on the next screen.
+            You'll receive a reference number and a timestamped record after submitting.
           </p>
         </div>
 
@@ -115,8 +136,8 @@
           {% endfor %}
         </ol>
         <p class="nextup__note">
-          Your request enters at <strong>Received</strong>. Our target is to move it
-          past that within <strong>two hours</strong> — and the clock is public.
+          Your request enters at <strong>Received</strong>. Our target is a first
+          staff acknowledgement within <strong>{{ target_hours }} hours</strong> — and the clock is public.
         </p>
         <p class="nextup__ref mono">Keep your FRC-reference. It's how you track this.</p>
       </div>

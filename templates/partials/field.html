@@ -1,7 +1,7 @@
 {% comment %}Single form field. Expects: field.{% endcomment %}
 <div class="field{% if field.errors %} field--error{% endif %}" data-field>
   <label class="field__label" for="{{ field.id_for_label }}">
-    <span>{{ field.label }}</span>
+    <span>{{ field.label|cut:' (optional)' }}</span>
     {% if field.field.required %}
       <span class="field__required">required</span>
     {% else %}
@@ -9,13 +9,16 @@
     {% endif %}
   </label>
 
-  {{ field }}
+  <div class="field__control{% if field.field.widget.input_type == 'password' %} field__control--password{% endif %}">
+    {{ field }}
+    {% if field.field.widget.input_type == 'password' %}
+      <button class="password-toggle" type="button" hidden data-password-toggle data-password-label="{{ field.label|lower }}" aria-controls="{{ field.id_for_label }}" aria-pressed="false" aria-label="Show {{ field.label|lower }}">Show</button>
+    {% endif %}
+  </div>
 
   {% if field.help_text %}
-    <p class="field__help" id="{{ field.id_for_label }}_help">{{ field.help_text }}</p>
+    <p class="field__help" id="{{ field.id_for_label }}_helptext">{{ field.help_text }}</p>
   {% endif %}
 
-  {% for error in field.errors %}
-    <p class="field__error" role="alert">{{ error }}</p>
-  {% endfor %}
+  {% if field.errors %}<div class="field__errors" id="{{ field.id_for_label }}_error">{% for error in field.errors %}<p class="field__error" role="alert">{{ error }}</p>{% endfor %}</div>{% endif %}
 </div>

@@ -10,6 +10,8 @@
 
 {% block content %}
 <section class="board" data-board data-highlight="{{ highlight_id }}">
+  {% url 'requests:board_updates' as update_url %}
+  {% include "partials/update_notice.html" with revision=board_revision %}
 
   {# ── Header + metrics ─────────────────────────────────────────────── #}
   <header class="board__head">
@@ -21,6 +23,8 @@
       <h1 class="board__title" data-reveal style="--i: 1">
         Every request,<br> and <em>where it stands</em>.
       </h1>
+      <p class="board__lede">Follow every need from submission to confirmed receipt.</p>
+      <p class="board__privacy">{% include "partials/icon.html" with name='check' %}Contact details and situation descriptions stay in the authorized workspace.</p>
     </div>
 
     <dl class="board__metrics">
@@ -56,6 +60,7 @@
       {% for filter in status_filters %}
         <a class="chip{% if filter.is_active %} is-active{% endif %}"
            {% if filter.value %}data-status="{{ filter.value }}"{% endif %}
+           {% if filter.is_active %}aria-current="page"{% endif %}
            href="{% querystring status=filter.value page=None highlight=None %}">
           {{ filter.label }}
           <span class="chip__count mono">{{ filter.count }}</span>
@@ -67,13 +72,13 @@
       {% if active_status %}<input type="hidden" name="status" value="{{ active_status }}">{% endif %}
 
       <label class="filters__search">
-        <span class="visually-hidden">Search requests</span>
+        <span class="filters__label">Search requests</span>
         <input type="search" name="q" value="{{ query }}"
-               placeholder="Search reference, place or need…" autocomplete="off">
+               placeholder="Reference, public area or category…" autocomplete="off">
       </label>
 
       <label class="filters__select">
-        <span class="visually-hidden">Filter by urgency</span>
+        <span class="filters__label">Urgency</span>
         <select name="urgency" data-autosubmit>
           <option value="">Any urgency</option>
           {% for value, label in urgency_choices %}
@@ -83,19 +88,21 @@
       </label>
 
       <label class="filters__select">
-        <span class="visually-hidden">Sort</span>
+        <span class="filters__label">Sort by</span>
         <select name="sort" data-autosubmit>
           <option value="recent" {% if ordering_mode != 'urgency' %}selected{% endif %}>Newest first</option>
           <option value="urgency" {% if ordering_mode == 'urgency' %}selected{% endif %}>Most urgent first</option>
         </select>
       </label>
 
-      <button class="btn btn--quiet btn--compact" type="submit">Apply</button>
+      <button class="btn btn--quiet btn--compact" type="submit">Apply filters</button>
       {% if query or active_urgency or active_status %}
-        <a class="filters__clear" href="{% url 'requests:list' %}">Clear</a>
+        <a class="filters__clear" href="{% url 'requests:list' %}">Reset</a>
       {% endif %}
     </form>
   </div>
+
+  <div class="board__results"><p><strong>{{ page_obj.paginator.count|intcomma }}</strong> request{{ page_obj.paginator.count|pluralize }}{% if query or active_urgency or active_status %} matching this view{% else %} on the board{% endif %}{% if relief_requests %}<span> · Showing {{ page_obj.start_index }}–{{ page_obj.end_index }}</span>{% endif %}</p><a href="{% url 'dashboard:map' %}">{% include "partials/icon.html" with name='map' %}View area map</a></div>
 
   {# ── Cards ────────────────────────────────────────────────────────── #}
   {% if relief_requests %}
@@ -115,10 +122,10 @@
       <nav class="pager" aria-label="Pagination">
         {% if page_obj.has_previous %}
           <a class="pager__link" href="{% querystring page=page_obj.previous_page_number highlight=None %}">
-            <span aria-hidden="true">←</span> Newer
+            <span aria-hidden="true">←</span> Previous
           </a>
         {% else %}
-          <span class="pager__link is-disabled"><span aria-hidden="true">←</span> Newer</span>
+          <span class="pager__link is-disabled"><span aria-hidden="true">←</span> Previous</span>
         {% endif %}
 
         <span class="pager__count mono">
@@ -127,10 +134,10 @@
 
         {% if page_obj.has_next %}
           <a class="pager__link" href="{% querystring page=page_obj.next_page_number highlight=None %}">
-            Older <span aria-hidden="true">→</span>
+            Next <span aria-hidden="true">→</span>
           </a>
         {% else %}
-          <span class="pager__link is-disabled">Older <span aria-hidden="true">→</span></span>
+          <span class="pager__link is-disabled">Next <span aria-hidden="true">→</span></span>
         {% endif %}
       </nav>
     {% endif %}
@@ -148,7 +155,7 @@
       </p>
       <div class="board__empty-actions">
         {% if query or active_urgency or active_status %}
-          <a class="btn btn--outline" href="{% url 'requests:list' %}">Clear filters</a>
+          <a class="btn btn--quiet" href="{% url 'requests:list' %}">Clear filters</a>
         {% endif %}
         <a class="btn btn--accent" href="{% url 'requests:create' %}">
           Submit a request <span class="btn__arrow" aria-hidden="true">→</span>
@@ -161,4 +168,5 @@
 
 {% block scripts %}
   <script src="{% static 'js/board.js' %}" defer></script>
+  <script src="{% static 'js/updates.js' %}" defer></script>
 {% endblock %}

@@ -1,36 +1,35 @@
-# Diagrams
+# Proposal use cases and implementation
 
-## In this folder
+The canonical reference is [floodrelief-proposal.pdf](../floodrelief-proposal.pdf).
+[proposal-usecase-p6.png](proposal-usecase-p6.png) contains the original use-case
+diagram from page 6.
 
-- **`proposal-usecase-p6.png`** — the use-case diagram from page 6 of the
-  proposal, extracted from the PDF so it can be referenced without opening it.
-  Four actors: *victim*, *official authorities*, *Donors/NGO*, *administrators*.
+The proposal describes victims, official authorities, donors/NGOs, and
+administrators. In the application, authorized officials use the NGO staff role;
+approved donors and NGO staff can offer support.
 
-The proposal itself is one level up at `docs/floodrelief-proposal.pdf`.
-
-## Still to add
-
-Drop the remaining UML diagrams here as you finish them — class diagram,
-sequence diagram for the status workflow, ER diagram. Export as PNG or SVG and
-name them `class-diagram.png`, `sequence-status-flow.png`, and so on.
-
-## How the use-case diagram maps to the code
-
-| Use case | Actor | Where it lives |
+| Use case | Actor | Implemented route or component |
 | --- | --- | --- |
-| sends request | victim | `/requests/new/` — `apps/requests/views.py:RequestCreateView` |
-| Track request status | victim | `/requests/` — `RequestListView`, plus the per-card audit trail |
-| Authenticate user | all | `apps.users.User` (email login), Django admin session auth |
-| verify and browse requests | official authorities | admin list + the *Mark verified* bulk action |
-| Update the status | official authorities | `ReliefRequest.transition_to()` — the only write path |
-| authorise and confirm request delivery | official authorities | *Mark delivered* / *Close* bulk actions |
-| browse throw the verified request | Donors/NGO | `/requests/?status=verified` |
-| manage users | administrators | `apps/users/admin.py` |
-| manage dashboard and website workflow | administrators | `/admin/`, landing metrics from `acknowledgement_stats()` |
+| Send a request | Beneficiary, including anonymous phone/walk-in entries | `/requests/new/` |
+| Track request status | Beneficiary and public viewers | `/requests/`; private `/requests/<uuid>/` |
+| Authenticate user | Registered roles | `/accounts/register/`, `/accounts/login/`; email-based custom user |
+| Verify and browse requests | Authorized staff | `/verification/` and request review forms |
+| Request additional information | Staff and beneficiary | Retained review history and requester response form |
+| Update status | Authorized coordinator/assigned responder | Lifecycle services and retained `StatusEvent` records |
+| Browse verified requests | Approved donors/NGO staff | `/support/` |
+| Contribute or offer support | Approved donors/NGO staff | Goods, transport, and INR pledge form; own pledge history |
+| Assign a responder | Authorized staff | Assignment form linked to an approved available pledge |
+| Upload delivery proof | Assigned responder/staff | Private optional JPEG, PNG, or PDF upload |
+| Authorize and confirm delivery | Responder, beneficiary, authorized staff | Hand-over record followed by recipient confirmation before closure |
+| Manage users | Administrator with Django user-management permissions | `/accounts/manage/` for account oversight/donor approval; `/admin/users/user/` for full account administration |
+| Manage dashboard/workflow | Staff/administrator | Distinct role dashboards, all-operations activity, read-only record admin |
+| View affected areas | Public users and responders | `/map/`, coarsened locations, and a working area-list fallback |
+| Receive updates | Signed-in account owner | Private `/dashboard/notifications/` inbox and update polling |
 
-Not built yet — these are the milestone-2 apps that currently hold only a
-docstring: **contribute and offer supports** (`apps/donations/`), **Upload
-delivery proof** (`apps/delivery/`), and the reviewer queue behind **verify and
-browse requests** (`apps/verification/`). Verification and delivery are
-reachable through the admin today; the dedicated staff-facing screens are what
-those apps will add.
+[architecture.md](architecture.md) adds an architecture diagram, entity
+relationships, and the full status workflow sequence for the implemented
+prototype.
+
+The software flow is implemented and verified locally. Live Maps configuration,
+physical-device checks, PostgreSQL staging, and the controlled pilot are
+tracked in [the project plan](../PROJECT_PROGRESS.md).

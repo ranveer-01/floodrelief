@@ -1,6 +1,4 @@
 """Root URL configuration for FloodRelief Connect."""
-from django.conf import settings
-from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import include, path
 
@@ -10,9 +8,10 @@ admin.site.index_title = "Relief operations"
 
 urlpatterns = [
     path("admin/", admin.site.urls),
+    path("accounts/", include("apps.users.urls")),
     path("", include("apps.dashboard.urls")),
     path("requests/", include("apps.requests.urls")),
+    path("verification/", include("apps.verification.urls")),
+    path("support/", include("apps.donations.urls")),
+    path("delivery/", include("apps.delivery.urls")),
 ]
-
-if settings.DEBUG:
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

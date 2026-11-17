@@ -1,4 +1,4 @@
-{% load humanize %}
+{% load humanize request_extras %}
 {% comment %}
 One request on the board. Expects: relief_request, forloop counter via `index`,
 and `is_new` when this row was just submitted.
@@ -27,28 +27,22 @@ and `is_new` when this row was just submitted.
   <h3 class="req-card__title">{{ relief_request.get_category_display }}</h3>
 
   <p class="req-card__where">
-    <span aria-hidden="true">◈</span> {{ relief_request.location }}
+    {% include "partials/icon.html" with name='pin' %}<span>{{ relief_request.public_area|default:'Area shared privately' }}</span>
   </p>
-
-  <p class="req-card__desc">{{ relief_request.description }}</p>
 
   <dl class="req-card__meta">
     <div class="req-card__metric">
       <dt>People</dt>
       <dd class="mono">{{ relief_request.people_affected|intcomma }}</dd>
     </div>
-    <div class="req-card__metric">
-      <dt>Submitted</dt>
-      <dd>
-        <time class="mono" datetime="{{ relief_request.submitted_at|date:'c' }}" data-relative>
-          {{ relief_request.submitted_at|date:"d M Y · H:i:s" }}
-        </time>
-      </dd>
-    </div>
     <div class="req-card__metric req-card__metric--ack"
          data-state="{% if relief_request.acknowledged_at %}{% if relief_request.acknowledged_within_target %}good{% else %}late{% endif %}{% elif relief_request.is_overdue %}overdue{% else %}waiting{% endif %}">
       <dt>Time to acknowledgement</dt>
       <dd class="mono">{{ relief_request.acknowledgement_display }}</dd>
+    </div>
+    <div class="req-card__metric req-card__metric--submitted">
+      <dt>Submitted</dt>
+      <dd><time class="mono" datetime="{{ relief_request.submitted_at|date:'c' }}" data-relative>{{ relief_request.submitted_at|date:"d M Y · H:i:s" }}</time></dd>
     </div>
   </dl>
 
@@ -70,10 +64,17 @@ and `is_new` when this row was just submitted.
             <strong>{{ event.get_to_status_display }}</strong>
           </span>
           <span class="trail__who">
-            {% if event.changed_by %}{{ event.changed_by.name }}{% else %}system{% endif %}
+            {% if event.changed_by_id %}{% if event.changed_by_id == relief_request.submitted_by_id %}requester{% else %}relief team{% endif %}{% else %}system{% endif %}
           </span>
         </li>
       {% endfor %}
     </ul>
   </details>
+  {% if request.user.is_authenticated %}
+    <div class="req-card__access">
+    {% if relief_request|can_open:request.user %}
+      <a class="btn btn--quiet btn--compact req-card__open" href="{% url 'requests:detail' relief_request.pk %}">Open request {% include "partials/icon.html" with name='arrow' %}</a>
+    {% endif %}
+    </div>
+  {% endif %}
 </article>

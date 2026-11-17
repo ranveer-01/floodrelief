@@ -1,0 +1,31 @@
+{% extends "workspace_base.html" %}
+{% load static %}
+{% block title %}Relief area map — FloodRelief Connect{% endblock %}
+{% block workspace_content %}
+<header class="workspace-head">
+  <p class="eyebrow"><span class="eyebrow__rule" aria-hidden="true"></span>Verified community needs</p>
+  <h1>See where help<br><em>is needed.</em></h1>
+  <p>Verified requests and active deliveries, grouped by their public area. Map positions show approximate areas; responders use the private request workspace to coordinate.</p>
+</header>
+<form class="workspace-search workspace-search--filters" method="get">
+  <label class="visually-hidden" for="map-category">Category</label><select class="field__input" name="category" id="map-category"><option value="">Every category</option>{% for value, label in category_choices %}<option value="{{ value }}" {% if category == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select>
+  <label class="visually-hidden" for="map-urgency">Urgency</label><select class="field__input" name="urgency" id="map-urgency"><option value="">Every urgency</option>{% for value, label in urgency_choices %}<option value="{{ value }}" {% if urgency == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select>
+  <button class="btn btn--quiet" type="submit">Apply</button>
+</form>
+<section class="workspace-panel map-panel" aria-label="Relief map" data-relief-map>
+  <div class="workspace-section__head"><h2>{{ total }} active request{{ total|pluralize }}</h2><span class="mono">{{ located }} with approximate positions</span></div>
+  {% if map_enabled %}<button class="btn btn--accent" type="button" data-load-map hidden>Load interactive map →</button><p class="record-stamp" data-map-message role="status">The area list below is available while the map loads.</p>{% else %}<p class="workspace-empty" data-map-message>Interactive map is unavailable. Browse verified requests in the area list below.</p>{% endif %}
+  <div class="map-canvas" data-map-canvas hidden></div>
+  <noscript><p class="workspace-empty">The area list below works without JavaScript.</p></noscript>
+</section>
+<section class="workspace-section">
+  <div class="workspace-section__head"><h2>Requests by area</h2><a class="workspace-link" href="{% url 'requests:list' %}">Open live board →</a></div>
+  {% if total > 250 %}<p class="workspace-empty">Showing the first 250 requests by urgency. Apply a category filter or open the board for the complete list.</p>{% endif %}
+  <div class="workspace-grid">
+    {% for item in map_requests %}<article class="request-summary"><div class="request-summary__top"><a class="workspace-link mono" href="{{ item.url }}">{{ item.reference }}</a><span>{{ item.status }}</span></div><h3>{{ item.category }}</h3><p>{{ item.area }}</p><div class="request-summary__foot"><span>{{ item.urgency }}</span><span class="mono">{{ item.people }} people</span></div></article>{% empty %}<p class="workspace-empty">No verified active requests match this view.</p>{% endfor %}
+  </div>
+</section>
+{{ map_requests|json_script:'map-request-data' }}
+{% if map_enabled %}{{ maps_key|json_script:'maps-browser-key' }}{% endif %}
+{% endblock %}
+{% block scripts %}<script src="{% static 'js/map.js' %}" defer></script>{% endblock %}

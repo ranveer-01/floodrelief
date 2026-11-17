@@ -1,0 +1,40 @@
+{% extends "workspace_base.html" %}
+{% block title %}{{ activity_title }} — FloodRelief Connect{% endblock %}
+{% block workspace_content %}
+<header class="workspace-head">
+  <p class="eyebrow"><span class="eyebrow__rule" aria-hidden="true"></span>{{ request.user.workspace_role_label }} records</p>
+  <h1>{{ activity_title }}.</h1>
+  <p>{% if all_records %}Follow all {{ kind }} and their current status across relief operations.{% elif kind == 'pledges' %}Follow the support you've offered and where it stands.{% elif kind == 'deliveries' %}Follow deliveries assigned to you and open a request to record the next step.{% else %}Track the requests you've submitted, respond to reviews and confirm receipt.{% endif %}</p>
+</header>
+<div class="workspace-toolbar">
+  <nav class="workspace-filters" aria-label="Record type">
+    {% for value, label in record_types %}<a href="{% querystring kind=value status=None page=None %}" {% if kind == value %}aria-current="page"{% endif %}>{{ label }}</a>{% endfor %}
+  </nav>
+  {% if request.user.can_coordinate %}<nav class="workspace-filters" aria-label="Record ownership"><a href="{% querystring scope='all' page=None %}" {% if all_records %}aria-current="page"{% endif %}>All operations</a><a href="{% querystring scope='mine' page=None %}" {% if not all_records %}aria-current="page"{% endif %}>My records</a></nav>{% endif %}
+  <form class="workspace-search workspace-search--filters" method="get">
+    <input type="hidden" name="kind" value="{{ kind }}">
+    <input type="hidden" name="scope" value="{% if all_records %}all{% else %}mine{% endif %}">
+    <div class="workspace-control"><label for="activity-query">Search records</label><input class="field__input" type="search" id="activity-query" name="q" value="{{ query }}" placeholder="Reference or record"></div>
+    <div class="workspace-control"><label for="activity-status">Status</label><select class="field__input" id="activity-status" name="status"><option value="">All statuses</option>{% for value, label in status_choices %}<option value="{{ value }}" {% if status == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+    <button class="btn btn--quiet" type="submit">Apply filters</button>
+    {% if query or status %}<a class="workspace-link workspace-clear" href="?kind={{ kind }}&amp;scope={% if all_records %}all{% else %}mine{% endif %}">Clear filters</a>{% endif %}
+  </form>
+</div>
+<p class="workspace-results">{{ page_obj.paginator.count }} matching {{ kind }}{% if page_obj.paginator.count %} · Showing {{ page_obj.start_index }}–{{ page_obj.end_index }}{% endif %}</p>
+{% if kind == 'requests' %}
+  <div class="workspace-grid">{% for relief_request in page_obj %}{% include "partials/request_summary.html" %}{% empty %}<div class="workspace-empty workspace-empty--panel"><h2>No requests match this view.</h2><p>Try another status or search term.</p></div>{% endfor %}</div>
+{% else %}
+  <div class="workspace-list">
+    {% for record in page_obj %}
+      <article class="workspace-row">
+        <div><a class="workspace-link mono" href="{% url 'requests:detail' record.request_id %}">{{ record.request.reference }}</a>
+          {% if kind == 'pledges' %}<p>{{ record.description }}</p><span>{{ record.donor.name }} · {{ record.quantity }} {{ record.unit }} · {{ record.pledged_at|date:'d M Y · H:i:s' }}</span>
+          {% else %}<p>{{ record.donation.description }}</p><span>{{ record.responder.name }} · assigned {{ record.assigned_at|date:'d M Y · H:i:s' }}</span>{% endif %}
+        </div>
+        {% if kind == 'pledges' %}<strong class="record-status">{{ record.get_status_display }}</strong>{% else %}{% include "partials/status_badge.html" with status=record.request.status label=record.request.get_status_display %}{% endif %}
+      </article>
+    {% empty %}<div class="workspace-empty"><h2>No records match this view.</h2><p>Try another status or search term.</p></div>{% endfor %}
+  </div>
+{% endif %}
+{% include "partials/workspace_pagination.html" %}
+{% endblock %}

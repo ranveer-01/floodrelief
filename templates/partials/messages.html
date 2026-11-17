@@ -4,6 +4,7 @@
     <div class="flash flash--{{ message.tags|default:'info' }}">
       <span class="flash__dot" aria-hidden="true"></span>
       <p class="flash__text">{{ message }}</p>
+      <button class="flash__dismiss" type="button" hidden data-dismiss-message aria-label="Dismiss notification">{% include "partials/icon.html" with name='close' %}</button>
     </div>
   {% endfor %}
 </div>

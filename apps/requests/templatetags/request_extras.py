@@ -2,8 +2,14 @@
 from django import template
 
 from apps.requests.models import format_minutes
+from apps.requests.permissions import can_view_request
 
 register = template.Library()
+
+
+@register.filter
+def can_open(relief_request, user):
+    return can_view_request(user, relief_request)
 
 
 @register.filter(name="minutes")

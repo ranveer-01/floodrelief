@@ -1,0 +1,46 @@
+{% extends "workspace_base.html" %}
+{% block title %}Accounts & donor approvals — FloodRelief Connect{% endblock %}
+{% block workspace_content %}
+<header class="workspace-head workspace-head--dashboard">
+  <div class="workspace-head__copy"><p class="eyebrow"><span class="eyebrow__rule" aria-hidden="true"></span>Account administration</p><h1>Accounts &amp; <em>donor approvals.</em></h1><p>Review an account before enabling support. Approved donors can offer pledges to verified relief requests.</p></div>
+  <div class="workspace-head__actions"><a class="btn btn--quiet" href="{% url 'admin:users_user_changelist' %}">{% include "partials/icon.html" with name='settings' %}Open administration</a><a class="btn btn--quiet" href="{% url 'dashboard:home' %}">Back to overview</a></div>
+</header>
+<dl class="workspace-metrics" aria-label="Account summary">
+  <div><dt>Platform accounts</dt><dd class="mono">{{ account_stats.total }}</dd><a class="workspace-link" href="?status=all">View all accounts&nbsp;→</a></div>
+  <div><dt>Donors awaiting approval</dt><dd class="mono">{{ account_stats.pending_donors }}</dd><a class="workspace-link" href="?status=pending">Review approvals&nbsp;→</a></div>
+  <div><dt>Approved donors</dt><dd class="mono">{{ account_stats.approved_donors }}</dd><a class="workspace-link" href="?status=approved">View approved donors&nbsp;→</a></div>
+  <div><dt>Active coordinators</dt><dd class="mono">{{ account_stats.coordinators }}</dd><span>Staff and administrators</span></div>
+</dl>
+<div class="workspace-toolbar">
+  <nav class="workspace-filters" aria-label="Account views"><a href="{% querystring status='pending' role=None page=None %}" {% if filters.status == 'pending' %}aria-current="page"{% endif %}>Pending donors</a><a href="{% querystring status='approved' role=None page=None %}" {% if filters.status == 'approved' %}aria-current="page"{% endif %}>Approved donors</a><a href="{% querystring status='all' page=None %}" {% if filters.status == 'all' %}aria-current="page"{% endif %}>All accounts</a></nav>
+  <form class="workspace-search workspace-search--accounts" method="get">
+    <div class="workspace-control"><label for="account-query">Search accounts</label><input class="field__input" type="search" id="account-query" name="q" value="{{ filters.q }}" placeholder="Name or email" maxlength="120"></div>
+    <div class="workspace-control"><label for="account-role">Role</label><select class="field__input" id="account-role" name="role"><option value="">All roles</option>{% for value, label in role_choices %}<option value="{{ value }}" {% if filters.role == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+    <div class="workspace-control"><label for="account-status">Account status</label><select class="field__input" id="account-status" name="status"><option value="pending" {% if filters.status == 'pending' %}selected{% endif %}>Pending donors</option><option value="approved" {% if filters.status == 'approved' %}selected{% endif %}>Approved donors</option><option value="active" {% if filters.status == 'active' %}selected{% endif %}>Active accounts</option><option value="inactive" {% if filters.status == 'inactive' %}selected{% endif %}>Inactive accounts</option><option value="all" {% if filters.status == 'all' %}selected{% endif %}>All accounts</option></select></div>
+    <button class="btn btn--quiet" type="submit">Apply filters</button>
+  </form>
+</div>
+<p class="workspace-results">{{ page_obj.paginator.count }} matching account{{ page_obj.paginator.count|pluralize }}{% if page_obj.paginator.count %} · Showing {{ page_obj.start_index }}–{{ page_obj.end_index }}{% endif %}</p>
+{% if page_obj %}
+  <div class="account-table-wrap">
+    <table class="account-table">
+      <caption class="visually-hidden">Accounts matching the selected filters</caption>
+      <thead><tr><th scope="col">Account</th><th scope="col">Role</th><th scope="col">Status</th><th scope="col">Actions</th></tr></thead>
+      <tbody>{% for account in page_obj %}
+        <tr>
+          <td data-label="Account"><div><strong>{{ account.name }}</strong><span class="account-table__email">{{ account.email }}</span><time class="account-table__date" datetime="{{ account.created_at|date:'c' }}">Joined {{ account.created_at|date:'d M Y' }}</time></div></td>
+          <td data-label="Role"><span>{{ account.workspace_role_label }}</span></td>
+          <td data-label="Status"><span class="account-state {% if not account.is_active %}account-state--inactive{% elif account.role_name == 'donor' and not account.support_approved %}account-state--pending{% elif account.role_name == 'donor' %}account-state--approved{% else %}account-state--active{% endif %}">{% if not account.is_active %}Inactive{% elif account.role_name == 'donor' and not account.support_approved %}Pending approval{% elif account.role_name == 'donor' %}Support approved{% else %}Active{% endif %}</span></td>
+          <td data-label="Actions"><div class="account-table__actions">
+            {% if request.user.can_approve_donors and account.is_active and account.role_name == 'donor' and not account.support_approved %}
+              <form method="post" action="{% url 'users:approve_donor' account.pk %}">{% csrf_token %}<input type="hidden" name="q" value="{{ filters.q }}"><input type="hidden" name="role" value="{{ filters.role }}"><input type="hidden" name="status" value="{{ filters.status }}"><button class="btn btn--accent btn--compact" type="submit" aria-label="Approve donor {{ account.name }}">Approve donor</button></form>
+            {% endif %}
+            <a class="workspace-link" href="{% url 'admin:users_user_change' account.pk %}">{% if request.user.can_approve_donors %}Edit account{% else %}View account{% endif %} →</a>
+          </div></td>
+        </tr>
+      {% endfor %}</tbody>
+    </table>
+  </div>
+{% else %}<div class="workspace-empty workspace-empty--panel"><h2>No accounts match this view.</h2><p>Choose another role, status or search term.</p><a class="workspace-link" href="?status=all">View all accounts →</a></div>{% endif %}
+{% include "partials/workspace_pagination.html" %}
+{% endblock %}

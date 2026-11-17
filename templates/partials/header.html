@@ -15,12 +15,24 @@
     <nav class="masthead__nav" aria-label="Primary">
       <a href="{% url 'dashboard:landing' %}#problem" class="masthead__link">The problem</a>
       <a href="{% url 'dashboard:landing' %}#lifecycle" class="masthead__link">Lifecycle</a>
-      <a href="{% url 'requests:list' %}" class="masthead__link {% if page_id == 'board' %}is-current{% endif %}">Live board</a>
+      <a href="{% url 'requests:list' %}" class="masthead__link {% if page_id == 'board' %}is-current{% endif %}" {% if page_id == 'board' %}aria-current="page"{% endif %}>Live board</a>
     </nav>
 
-    <a class="btn btn--accent btn--compact" href="{% url 'requests:create' %}">
-      Submit a request
-      <span class="btn__arrow" aria-hidden="true">→</span>
-    </a>
+    <div class="masthead__actions">
+      <a class="masthead__link masthead__account-link" href="{% if request.user.is_authenticated %}{% url 'dashboard:home' %}{% else %}{% url 'users:login' %}{% endif %}">{% if request.user.is_authenticated %}Dashboard{% else %}Sign in{% endif %}</a>
+      {% include "partials/header_action.html" %}
+    </div>
+
+    <details class="masthead-menu" data-menu>
+      <summary class="masthead-menu__toggle" aria-label="Navigation menu">{% include "partials/icon.html" with name='menu' %}</summary>
+      <nav class="masthead-menu__panel" aria-label="Mobile primary">
+        <a href="{% url 'dashboard:landing' %}">Home</a>
+        <a href="{% url 'requests:list' %}" {% if page_id == 'board' %}aria-current="page"{% endif %}>{% include "partials/icon.html" with name='board' %}Live board</a>
+        <a href="{% url 'dashboard:map' %}" {% if page_id == 'map' %}aria-current="page"{% endif %}>{% include "partials/icon.html" with name='map' %}Area map</a>
+        <a href="{% url 'dashboard:landing' %}#lifecycle">How it works</a>
+        {% if request.user.is_authenticated %}<a href="{% url 'dashboard:home' %}">{% include "partials/icon.html" with name='dashboard' %}{{ request.user.workspace_role_label }} dashboard</a><a href="{% url 'dashboard:notifications' %}">{% include "partials/icon.html" with name='bell' %}Notifications{% if unread_notification_count %}<span class="nav-count">{{ unread_notification_count }}</span>{% endif %}</a>
+        {% else %}<a href="{% url 'users:login' %}">Sign in</a><a href="{% url 'users:register' %}">Create an account {% include "partials/icon.html" with name='arrow' %}</a>{% endif %}
+      </nav>
+    </details>
   </div>
 </header>

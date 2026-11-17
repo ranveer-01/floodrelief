@@ -1,0 +1,16 @@
+{% extends "workspace_base.html" %}
+{% block title %}Offer support — FloodRelief Connect{% endblock %}
+{% block workspace_content %}
+<header class="workspace-head">
+  <p class="eyebrow"><span class="eyebrow__rule" aria-hidden="true"></span>Verified community needs</p>
+  <h1>Turn an offer<br><em>into tracked support.</em></h1>
+  <p>These requests have been verified by relief staff and are awaiting assignment. Open a request to pledge goods, transport or funds.</p>
+</header>
+<form class="workspace-search" method="get">
+  <label for="support-search" class="visually-hidden">Search verified requests</label>
+  <input class="field__input" id="support-search" type="search" name="q" value="{{ query }}" placeholder="Reference, public area or category">
+  <button class="btn btn--quiet" type="submit">Search</button>
+</form>
+<div class="workspace-grid">{% for relief_request in page_obj %}{% include "partials/request_summary.html" %}{% empty %}<p class="workspace-empty">No verified requests match this view.</p>{% endfor %}</div>
+{% include "partials/workspace_pagination.html" %}
+{% endblock %}

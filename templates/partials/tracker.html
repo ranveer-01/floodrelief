@@ -3,13 +3,15 @@ The Received -> Closed progress tracker. Expects: relief_request.
 `--p` is the current stage index (0-5); the fill scales to `--p / 5` once the
 tracker scrolls into view.
 {% endcomment %}
-<ol class="tracker {% if compact %}tracker--compact{% endif %}"
+{% if compact %}<p class="tracker-caption"><span>Lifecycle progress</span><span class="mono">{{ relief_request.status_index|add:1 }} / 6</span></p>{% endif %}
+<ol class="tracker {% if compact %}tracker--compact{% else %}tracker--full{% endif %}"
     data-tracker
     style="--p: {{ relief_request.status_index }}"
-    aria-label="Request lifecycle progress">
+    aria-label="Request lifecycle progress: {{ relief_request.get_status_display }}, stage {{ relief_request.status_index|add:1 }} of 6">
   {% for stage in relief_request.tracker_stages %}
     <li class="tracker__stage is-{{ stage.state }}"
         data-status="{{ stage.status }}"
+        title="{{ stage.label }}"
         style="--i: {{ forloop.counter0 }}"
         {% if stage.state == 'current' %}aria-current="step"{% endif %}>
       <span class="tracker__node" aria-hidden="true"></span>

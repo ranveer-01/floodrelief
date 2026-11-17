@@ -1,0 +1,25 @@
+{% extends "workspace_base.html" %}
+{% load request_extras %}
+{% block title %}Notifications — FloodRelief Connect{% endblock %}
+{% block workspace_content %}
+<header class="workspace-head">
+  <p class="eyebrow"><span class="eyebrow__rule" aria-hidden="true"></span>Account updates</p>
+  <h1>Your notifications.</h1>
+  <p>Review decisions, support offers, delivery updates, and account approvals stay here until you read them.</p>
+</header>
+<div class="workspace-section__head">
+  <nav class="workspace-filters" aria-label="Notification filter"><a href="{% querystring unread=None page=None %}" {% if not unread_only %}aria-current="page"{% endif %}>All updates</a><a href="{% querystring unread='1' page=None %}" {% if unread_only %}aria-current="page"{% endif %}>Unread</a></nav>
+  {% if unread_notification_count %}<form method="post" action="{% url 'dashboard:read_all' %}">{% csrf_token %}<button class="btn btn--quiet btn--compact" type="submit">Mark all as read</button></form>{% endif %}
+</div>
+<div class="workspace-list">
+  {% for notification in page_obj %}
+  <article class="workspace-row{% if not notification.read_at %} notification--unread{% endif %}">
+    <div><strong>{{ notification.title }}</strong><p>{{ notification.body }}</p><p class="record-stamp"><time datetime="{{ notification.created_at|date:'c' }}">{{ notification.created_at|date:'d M Y · H:i:s' }}</time>{% if not notification.read_at %} · Unread{% endif %}</p>
+      {% if notification.request %}{% if notification.request|can_open:request.user %}<p><a class="workspace-link" href="{% url 'requests:detail' notification.request_id %}">Open request →</a></p>{% endif %}{% endif %}
+    </div>
+    {% if not notification.read_at %}<form method="post" action="{% url 'dashboard:read_notification' notification.pk %}">{% csrf_token %}<button class="btn btn--quiet btn--compact" type="submit">Mark as read</button></form>{% endif %}
+  </article>
+  {% empty %}<p class="workspace-empty">{% if unread_only %}You have no unread updates.{% else %}Your account updates will appear here.{% endif %}</p>{% endfor %}
+</div>
+{% include "partials/workspace_pagination.html" %}
+{% endblock %}

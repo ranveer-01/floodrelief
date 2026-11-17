@@ -1,0 +1,27 @@
+{% extends "workspace_base.html" %}
+{% block title %}Sign in — FloodRelief Connect{% endblock %}
+{% block workspace_content %}
+<div class="account-layout">
+  <header class="workspace-head">
+    <p class="eyebrow"><span class="eyebrow__rule" aria-hidden="true"></span>Your relief workspace</p>
+    <h1>Sign in to<br><em>keep things moving.</em></h1>
+    <p>Track your requests, offer support, or coordinate relief using your email address.</p>
+    <ul class="account-benefits">
+      <li>{% include "partials/icon.html" with name='activity' %}Follow every request in one place</li>
+      <li>{% include "partials/icon.html" with name='bell' %}Stay informed as relief moves forward</li>
+      <li>{% include "partials/icon.html" with name='check' %}Keep a clear record through to receipt</li>
+    </ul>
+  </header>
+  <div class="workspace-panel account-panel">
+    <div class="account-panel__head"><h2>Welcome back</h2><p>Use the email address linked to your account.</p></div>
+    <form method="post" class="action-form">
+      {% csrf_token %}
+      {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
+      {% include "partials/form_errors.html" %}
+      {% for field in form %}{% include "partials/field.html" with field=field %}{% endfor %}
+      <button class="btn btn--accent" type="submit">Sign in <span aria-hidden="true">→</span></button>
+    </form>
+    <p class="account-panel__foot">New to FloodRelief Connect? <a class="workspace-link" href="{% url 'users:register' %}">Create an account →</a></p>
+  </div>
+</div>
+{% endblock %}

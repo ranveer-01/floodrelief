@@ -1,0 +1,15 @@
+{% load humanize %}
+<article class="request-summary" data-status="{{ relief_request.status }}">
+  <div class="request-summary__top">
+    <a class="mono workspace-link" href="{% url 'requests:detail' relief_request.pk %}">{{ relief_request.reference }}</a>
+    {% include "partials/status_badge.html" with status=relief_request.status label=relief_request.get_status_display %}
+  </div>
+  <h3><a href="{% url 'requests:detail' relief_request.pk %}">{{ relief_request.get_category_display }}</a></h3>
+  <p class="request-summary__location">{% include "partials/icon.html" with name='pin' %}<span>{% if request.user.can_coordinate or relief_request.submitted_by_id == request.user.pk %}{{ relief_request.location }}{% else %}{{ relief_request.public_area|default:'Area shared privately' }}{% endif %}</span></p>
+  <div class="request-summary__foot">
+    <span data-urgency="{{ relief_request.urgency }}" class="request-summary__urgency">{{ relief_request.get_urgency_display }}</span>
+    <span class="mono">{{ relief_request.people_affected|intcomma }} people</span>
+    {% if relief_request.status == 'received' %}<span>{{ relief_request.latest_verification.get_decision_display|default:'Pending review' }}</span>{% endif %}
+  </div>
+  <div class="request-summary__action"><time datetime="{{ relief_request.submitted_at|date:'c' }}">Submitted {{ relief_request.submitted_at|date:'d M Y' }}</time><a href="{% url 'requests:detail' relief_request.pk %}">{% if action_label %}{{ action_label }}{% elif relief_request.verification_state == 'more_info' and relief_request.submitted_by_id == request.user.pk %}Respond to review{% elif relief_request.status == 'delivered' and relief_request.submitted_by_id == request.user.pk %}Confirm receipt{% else %}View request{% endif %} {% include "partials/icon.html" with name='arrow' %}</a></div>
+</article>

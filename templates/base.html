@@ -19,7 +19,7 @@
   <script>document.documentElement.classList.replace('no-js', 'js');</script>
   {% block extra_head %}{% endblock %}
 </head>
-<body class="page page--{{ page_id|default:'default' }}" data-page="{{ page_id|default:'default' }}">
+<body class="page page--{{ page_id|default:'default' }} {% block body_class %}{% endblock %}" data-page="{{ page_id|default:'default' }}">
   <a class="skip-link" href="#main">Skip to content</a>
 
   {% include "partials/header.html" %}
@@ -29,9 +29,10 @@
     {% block content %}{% endblock %}
   </main>
 
-  {% include "partials/footer.html" %}
+  {% block footer %}{% include "partials/footer.html" %}{% endblock %}
 
   <script src="{% static 'js/motion.js' %}" defer></script>
+  <script src="{% static 'js/ui.js' %}" defer></script>
   {% block scripts %}{% endblock %}
 </body>
 </html>

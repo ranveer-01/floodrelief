@@ -1,0 +1,18 @@
+<form method="post" enctype="multipart/form-data" class="action-form">
+  {% csrf_token %}
+  <input type="hidden" name="action" value="{{ action_name }}">
+  {% include "partials/form_errors.html" with form=action_form %}
+  {% for field in action_form %}
+    {% if field.is_hidden %}
+      {{ field }}
+    {% elif field.field.widget.input_type == 'checkbox' %}
+      <div class="field">
+        <label class="workspace-check">{{ field }} <span>{{ field.label }}</span></label>
+        {% for error in field.errors %}<p class="field__error" role="alert">{{ error }}</p>{% endfor %}
+      </div>
+    {% else %}
+      {% include "partials/field.html" with field=field %}
+    {% endif %}
+  {% endfor %}
+  <button class="btn btn--accent" type="submit">{{ button_label }} <span aria-hidden="true">→</span></button>
+</form>

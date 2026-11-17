@@ -1,0 +1,122 @@
+{% extends "workspace_base.html" %}
+{% load humanize static request_extras %}
+{% block title %}{{ relief_request.reference }} — FloodRelief Connect{% endblock %}
+{% block workspace_content %}
+{% url 'requests:updates' relief_request.pk as update_url %}
+{% with revision=relief_request.updated_at|iso %}{% include "partials/update_notice.html" %}{% endwith %}
+<header class="workspace-head">
+  <p class="eyebrow"><span class="eyebrow__rule" aria-hidden="true"></span><span class="mono">{{ relief_request.reference }}</span></p>
+  <h1>{{ relief_request.get_category_display }}</h1>
+  <div class="workspace-badges">
+    {% include "partials/status_badge.html" with status=relief_request.status label=relief_request.get_status_display %}
+    <span class="request-summary__urgency" data-urgency="{{ relief_request.urgency }}">{{ relief_request.get_urgency_display }}</span>
+    {% if relief_request.status == 'received' %}<strong>{{ relief_request.latest_verification.get_decision_display|default:'Pending review' }}</strong>{% endif %}
+  </div>
+  <p>{{ relief_request.location }} · <span class="mono">{{ relief_request.people_affected|intcomma }} people</span></p>
+  {% if can_review or can_respond or can_pledge or can_assign or can_start or can_deliver or can_confirm %}<a class="btn btn--quiet btn--compact request-action-link" href="#request-actions">Go to available actions <span aria-hidden="true">↓</span></a>{% endif %}
+</header>
+
+<div class="request-layout">
+  <div class="request-layout__main">
+    <section class="workspace-panel">
+      <h2>The request</h2>
+      <p class="request-description">{{ relief_request.description|linebreaksbr }}</p>
+      <dl class="request-facts">
+        <div><dt>Submitted</dt><dd><time class="mono" datetime="{{ relief_request.submitted_at|date:'c' }}">{{ relief_request.submitted_at|date:'d M Y · H:i:s' }}</time></dd></div>
+        <div><dt>Time to acknowledgement</dt><dd class="mono">{{ relief_request.acknowledgement_display }}</dd></div>
+        {% if private_details %}
+          <div><dt>Contact</dt><dd>{{ relief_request.contact_name }}</dd></div>
+          <div><dt>Reach the requester</dt><dd><a class="workspace-link mono" href="tel:{{ relief_request.contact_phone }}">{{ relief_request.contact_phone }}</a></dd></div>
+        {% endif %}
+      </dl>
+      {% if owner or request.user.can_coordinate %}{% if relief_request.supporting_evidence %}<p><a class="workspace-link" href="{% url 'requests:evidence' relief_request.pk %}">Download request evidence →</a></p>{% endif %}{% endif %}
+      {% include "partials/tracker.html" with relief_request=relief_request compact=False %}
+    </section>
+
+    {% if duplicates %}
+    <section class="workspace-notice">
+      <h2>Possibly related requests</h2>
+      <p>These requests share the same category and location. Check them with the requester before deciding whether they are related.</p>
+      {% for related in duplicates %}<a class="workspace-link mono" href="{% url 'requests:detail' related.pk %}">{{ related.reference }} · {{ related.get_status_display }} →</a>{% endfor %}
+    </section>
+    {% endif %}
+
+    {% if owner or request.user.can_coordinate %}
+    <section class="workspace-panel">
+      <h2>Review history</h2>
+      {% for review in relief_request.verifications.all %}
+        <article class="review-record">
+          <div class="workspace-row__title"><strong>{{ review.get_decision_display }}</strong><span>{{ review.get_method_display }}</span></div>
+          <p>{{ review.notes|linebreaksbr }}</p>
+          <p class="record-stamp">{{ review.reviewed_by.name }} · <time class="mono" datetime="{{ review.reviewed_at|date:'c' }}">{{ review.reviewed_at|date:'d M Y · H:i:s' }}</time></p>
+          {% if review.evidence %}<a class="workspace-link" href="{% url 'verification:evidence' review.pk %}">Download supporting evidence →</a>{% endif %}
+        </article>
+      {% empty %}<p class="workspace-empty">Awaiting the first staff review.</p>{% endfor %}
+    </section>
+    {% endif %}
+
+    {% if donations %}
+    <section class="workspace-panel">
+      <h2>Support pledges</h2>
+      {% for pledge in donations %}
+        <article class="review-record">
+          <div class="workspace-row__title"><strong>{{ pledge.donor.name }} · {{ pledge.get_kind_display }}</strong><span>{{ pledge.get_status_display }}</span></div>
+          <p>{{ pledge.description }}</p><p class="mono">{{ pledge.quantity }} {{ pledge.unit }}</p>
+          <p class="record-stamp">Offered <time datetime="{{ pledge.pledged_at|date:'c' }}">{{ pledge.pledged_at|date:'d M Y · H:i:s' }}</time></p>
+          {% if pledge.donor_id == request.user.pk and pledge.status == 'pledged' %}
+            <form method="post" action="{% url 'donations:withdraw' pledge.pk %}">{% csrf_token %}<button class="btn btn--quiet btn--compact" type="submit">Withdraw this offer</button></form>
+          {% endif %}
+        </article>
+      {% endfor %}
+    </section>
+    {% endif %}
+
+    {% if delivery %}
+    <section class="workspace-panel">
+      <h2>Delivery record</h2>
+      <dl class="request-facts">
+        <div><dt>Assigned responder</dt><dd>{{ delivery.responder.name }}</dd></div>
+        <div><dt>Assigned</dt><dd class="mono">{{ delivery.assigned_at|date:'d M Y · H:i:s' }}</dd></div>
+        {% if delivery.started_at %}<div><dt>Started</dt><dd class="mono">{{ delivery.started_at|date:'d M Y · H:i:s' }}</dd></div>{% endif %}
+        {% if delivery.delivered_at %}<div><dt>Delivered</dt><dd class="mono">{{ delivery.delivered_at|date:'d M Y · H:i:s' }}</dd></div>{% endif %}
+        {% if private_details and delivery.recipient_name %}<div><dt>Recipient</dt><dd>{{ delivery.recipient_name }}</dd></div>{% endif %}
+        {% if delivery.recipient_confirmed_at %}<div><dt>Receipt confirmed</dt><dd class="mono">{{ delivery.recipient_confirmed_at|date:'d M Y · H:i:s' }}</dd></div>{% endif %}
+      </dl>
+      {% if private_details %}
+        {% if delivery.confirmation_note %}<p class="request-description">{{ delivery.confirmation_note|linebreaksbr }}</p>{% endif %}
+        {% if delivery.proof %}<a class="workspace-link" href="{% url 'delivery:proof' delivery.pk %}">Download proof of delivery →</a>{% endif %}
+        {% if delivery.recipient_confirmation %}<p class="request-description"><strong>Recipient confirmation:</strong> {{ delivery.recipient_confirmation|linebreaksbr }}</p><p class="record-stamp">Recorded by {{ delivery.confirmed_by.name }}</p>{% endif %}
+      {% endif %}
+    </section>
+    {% endif %}
+
+    <section class="workspace-panel">
+      <h2>Lifecycle audit trail</h2>
+      {% for event in relief_request.events.all %}
+        <article class="review-record">
+          <strong>{% if event.from_status %}{{ event.get_from_status_display }} → {% endif %}{{ event.get_to_status_display }}</strong>
+          <p class="record-stamp">{% if event.changed_by %}{{ event.changed_by.name }}{% else %}System{% endif %} · <time class="mono" datetime="{{ event.changed_at|date:'c' }}">{{ event.changed_at|date:'d M Y · H:i:s' }}</time></p>
+          {% if owner or request.user.can_coordinate %}<p>{{ event.note }}</p>{% endif %}
+        </article>
+      {% endfor %}
+    </section>
+  </div>
+
+  <aside class="request-layout__actions" id="request-actions" aria-label="Available request actions">
+    {% if can_review %}<section class="workspace-panel"><h2>Record a review</h2>{% include "partials/action_form.html" with action_form=forms.review action_name='review' button_label='Record review' %}</section>{% endif %}
+    {% if can_respond %}<section class="workspace-panel"><h2>Supply more information</h2>{% include "partials/action_form.html" with action_form=forms.respond action_name='respond' button_label='Send for review' %}</section>{% endif %}
+    {% if can_pledge %}<section class="workspace-panel"><h2>Offer support</h2>{% include "partials/action_form.html" with action_form=forms.pledge action_name='pledge' button_label='Record support pledge' %}</section>{% endif %}
+    {% if can_assign %}<section class="workspace-panel"><h2>Assign a responder</h2>{% include "partials/action_form.html" with action_form=forms.assign action_name='assign' button_label='Assign this pledge' %}</section>{% endif %}
+    {% if can_start %}<section class="workspace-panel"><h2>Ready to start?</h2><p>Confirm when the assigned support is on its way.</p><form class="action-form" method="post">{% csrf_token %}<input type="hidden" name="action" value="start"><button class="btn btn--accent" type="submit">Start delivery →</button></form></section>{% endif %}
+    {% if can_deliver %}<section class="workspace-panel"><h2>Record the hand-over</h2>{% include "partials/action_form.html" with action_form=forms.deliver action_name='deliver' button_label='Confirm delivery' %}</section>{% endif %}
+    {% if can_confirm %}<section class="workspace-panel"><h2>Confirm receipt</h2>{% include "partials/action_form.html" with action_form=forms.confirm action_name='confirm' button_label='Confirm receipt and close' %}</section>{% endif %}
+    <section class="workspace-notice">
+      {% if relief_request.is_closed %}<h2>Request closed</h2><p>The recorded support has reached the recipient, and receipt is confirmed.</p>
+      {% elif relief_request.status == 'received' %}<h2>Review comes first</h2><p>Relief staff must verify this request before support can be assigned. The latest review decision is shown above.</p>
+      {% elif relief_request.status == 'delivered' %}<h2>Awaiting confirmation</h2><p>The requester or authorized staff must record the recipient's confirmation before closure.</p>
+      {% else %}<h2>Keep the record current</h2><p>Each delivery update adds a timestamped event. Contact relief staff if the situation changes.</p>{% endif %}
+    </section>
+  </aside>
+</div>
+{% endblock %}
+{% block scripts %}<script src="{% static 'js/updates.js' %}" defer></script>{% endblock %}

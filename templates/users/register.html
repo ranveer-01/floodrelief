@@ -1,0 +1,23 @@
+{% extends "workspace_base.html" %}
+{% block title %}Create an account — FloodRelief Connect{% endblock %}
+{% block workspace_content %}
+<div class="account-layout">
+  <header class="workspace-head">
+    <p class="eyebrow"><span class="eyebrow__rule" aria-hidden="true"></span>One account, one clear record</p>
+    <h1>A place to<br><em>follow through.</em></h1>
+    <p>Create an account to track requests or offer support. Donor accounts need administrator approval before contributing.</p>
+    <p>You can also <a class="workspace-link" href="{% url 'requests:create' %}">request help without an account</a>.</p>
+    <p>Already registered? <a class="workspace-link" href="{% url 'users:login' %}">Sign in →</a></p>
+  </header>
+  <div class="workspace-panel account-panel">
+    <div class="account-panel__head"><h2>Create your account</h2><p>Your email address will be your sign-in ID.</p></div>
+    <form method="post" class="action-form">
+      {% csrf_token %}
+      {% include "partials/form_errors.html" %}
+      {% for field in form %}{% include "partials/field.html" with field=field %}{% endfor %}
+      <button class="btn btn--accent" type="submit">Create account <span aria-hidden="true">→</span></button>
+    </form>
+    <p class="account-panel__foot">Already have an account? <a class="workspace-link" href="{% url 'users:login' %}">Sign in →</a></p>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,28 @@
+{% if not request.user.can_support %}
+  <section class="workspace-notice" id="donor-status" aria-labelledby="donor-status-title">
+    <h2 id="donor-status-title">Your donor account is awaiting approval.</h2>
+    <p>An administrator must enable support before you can browse verified needs or offer a pledge. You'll receive a notification when your approval changes.</p>
+    <a class="workspace-link" href="{% url 'dashboard:notifications' %}">Check account updates →</a>
+  </section>
+{% else %}
+  <section class="workspace-section">
+    <div class="workspace-section__head"><h2>Verified needs you can support</h2><a class="workspace-link" href="{% url 'donations:available' %}">Browse verified needs →</a></div>
+    <div class="workspace-grid">{% for relief_request in available_requests %}{% include "partials/request_summary.html" with action_label='Offer support' %}{% empty %}<div class="workspace-empty workspace-empty--panel"><h3>No requests are awaiting support.</h3><p>New verified needs will appear here when the relief team finishes their review.</p></div>{% endfor %}</div>
+  </section>
+{% endif %}
+<section class="workspace-section">
+  <div class="workspace-section__head"><h2>Your assigned deliveries</h2><a class="workspace-link" href="{% url 'dashboard:activity' %}?kind=deliveries">View deliveries →</a></div>
+  <div class="workspace-grid">{% for delivery in deliveries %}{% include "partials/delivery_card.html" %}{% empty %}<div class="workspace-empty workspace-empty--panel"><h3>No active delivery is assigned to you.</h3><p>Once staff assign one of your pledges, you can record the start and delivery from its request page.</p></div>{% endfor %}</div>
+</section>
+<section class="workspace-section">
+  <div class="workspace-section__head"><h2>Your recent pledges</h2><a class="workspace-link" href="{% url 'dashboard:activity' %}?kind=pledges">View all pledges →</a></div>
+  <div class="workspace-list">
+    {% for pledge in my_pledges %}<article class="workspace-row"><div><a class="mono workspace-link" href="{% url 'requests:detail' pledge.request_id %}">{{ pledge.request.reference }}</a><p>{{ pledge.description }}</p><span>{{ pledge.quantity }} {{ pledge.unit }} · {{ pledge.pledged_at|date:'d M Y' }}</span></div><strong class="record-status">{{ pledge.get_status_display }}</strong></article>{% empty %}<p class="workspace-empty">Your support offers will appear here.{% if request.user.can_support %} <a class="workspace-link" href="{% url 'donations:available' %}">Find a verified need to support →</a>{% endif %}</p>{% endfor %}
+  </div>
+</section>
+{% if my_request_stats.total %}
+  <section class="workspace-section">
+    <div class="workspace-section__head"><h2>Your requests for help</h2><a class="workspace-link" href="{% url 'dashboard:activity' %}?kind=requests">View your requests →</a></div>
+    <div class="workspace-grid">{% for relief_request in my_requests %}{% include "partials/request_summary.html" %}{% endfor %}</div>
+  </section>
+{% endif %}

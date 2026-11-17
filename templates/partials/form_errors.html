@@ -1,0 +1,7 @@
+{% if form.errors %}
+  <div class="reqform__alert" role="alert" data-error-summary>
+    <strong>Please check the details below.</strong>
+    {% for error in form.non_field_errors %}<p>{{ error }}</p>{% endfor %}
+    <ul>{% for field in form %}{% if field.errors %}<li><a href="#{% if field.field.widget.input_type == 'radio' %}{{ field.auto_id }}_0{% else %}{{ field.id_for_label }}{% endif %}">{{ field.label|cut:' (optional)' }}: {{ field.errors.0 }}</a></li>{% endif %}{% endfor %}</ul>
+  </div>
+{% endif %}

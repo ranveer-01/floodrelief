@@ -12,9 +12,13 @@ import uuid
 from datetime import timedelta
 
 from django.conf import settings
-from django.db import models
+from django.core.exceptions import PermissionDenied, ValidationError
+from django.core.validators import MaxValueValidator, MinValueValidator
+from django.db import models, transaction
 from django.urls import reverse
 from django.utils import timezone
+
+from .files import evidence_path, validate_evidence
 
 # Unambiguous alphabet for the human-readable reference code (no 0/O/1/I).
 REFERENCE_ALPHABET = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ"
@@ -81,7 +85,19 @@ class ReliefRequestQuerySet(models.QuerySet):
         return self.exclude(status=RequestStatus.CLOSED)
 
     def awaiting_acknowledgement(self):
-        return self.filter(status=RequestStatus.RECEIVED)
+        return self.filter(acknowledged_at__isnull=True)
+
+    def prioritized(self):
+        return self.annotate(
+            urgency_rank=models.Case(
+                *[
+                    models.When(urgency=value, then=models.Value(weight))
+                    for value, weight in URGENCY_WEIGHT.items()
+                ],
+                default=models.Value(9),
+                output_field=models.IntegerField(),
+            )
+        ).order_by("urgency_rank", "submitted_at")
 
     def acknowledged(self):
         return self.filter(acknowledged_at__isnull=False)
@@ -152,6 +168,22 @@ class ReliefRequest(models.Model):
     category = models.CharField(max_length=20, choices=Category.choices)
     description = models.TextField(help_text="What is needed, for how many people.")
     location = models.CharField(max_length=200, help_text="Village / ward, landmark, district.")
+    public_area = models.CharField(
+        max_length=120, blank=True,
+        help_text="Optional district or town shown publicly. Keep addresses and contact details in the private location.",
+    )
+    latitude = models.DecimalField(
+        max_digits=9, decimal_places=6, null=True, blank=True,
+        validators=[MinValueValidator(-90), MaxValueValidator(90)],
+    )
+    longitude = models.DecimalField(
+        max_digits=9, decimal_places=6, null=True, blank=True,
+        validators=[MinValueValidator(-180), MaxValueValidator(180)],
+    )
+    supporting_evidence = models.FileField(
+        upload_to=evidence_path, validators=[validate_evidence], blank=True,
+    )
+    evidence_name = models.CharField(max_length=255, blank=True)
     urgency = models.CharField(max_length=10, choices=Urgency.choices, default=Urgency.MEDIUM)
     people_affected = models.PositiveIntegerField(default=1)
 
@@ -188,6 +220,11 @@ class ReliefRequest(models.Model):
     def get_absolute_url(self):
         return f"{reverse('requests:list')}?highlight={self.pk}#req-{self.pk}"
 
+    def clean(self):
+        super().clean()
+        if (self.latitude is None) != (self.longitude is None):
+            raise ValidationError("Provide both latitude and longitude, or leave both empty.")
+
     # --- Persistence --------------------------------------------------------
     @classmethod
     def generate_reference(cls):
@@ -199,42 +236,115 @@ class ReliefRequest(models.Model):
 
     def save(self, *args, **kwargs):
         creating = self._state.adding
-        if not self.reference:
-            self.reference = self.generate_reference()
-        super().save(*args, **kwargs)
-        if creating:
-            StatusEvent.objects.create(
-                request=self,
-                from_status="",
-                to_status=self.status,
-                note="Request logged.",
-            )
+        if creating and self.status != RequestStatus.RECEIVED:
+            raise ValidationError("New requests must enter at Received.")
+        if not creating and (
+            kwargs.get("update_fields") is None or "status" in kwargs["update_fields"]
+        ):
+            previous = type(self).objects.values_list("status", flat=True).get(pk=self.pk)
+            if previous != self.status:
+                raise ValidationError("Use the workflow actions to change a request's status.")
+        with transaction.atomic():
+            if not self.reference:
+                self.reference = self.generate_reference()
+            super().save(*args, **kwargs)
+            if creating:
+                StatusEvent.objects.create(
+                    request=self,
+                    from_status="",
+                    to_status=self.status,
+                    changed_by=self.submitted_by,
+                    note="Request logged.",
+                )
+
+    def validate_transition(self, new_status, by):
+        if new_status not in RequestStatus.values:
+            raise ValidationError("Choose a valid lifecycle status.")
+        if self.status == new_status:
+            return
+        current_index = STATUS_ORDER.index(self.status)
+        if current_index == len(STATUS_ORDER) - 1 or STATUS_ORDER[current_index + 1] != new_status:
+            raise ValidationError("Requests must move through each lifecycle stage in order.")
+
+        coordinator = bool(by and by.can_coordinate)
+        delivery = getattr(self, "delivery", None)
+        responder = bool(by and by.can_support and delivery and delivery.responder_id == by.pk)
+        owner = bool(by and by.is_active and self.submitted_by_id == by.pk)
+        allowed = coordinator
+        if new_status in (RequestStatus.IN_PROGRESS, RequestStatus.DELIVERED):
+            allowed = coordinator or responder
+        elif new_status == RequestStatus.CLOSED:
+            allowed = coordinator or owner
+        if not allowed:
+            raise PermissionDenied("Your account cannot make this workflow change.")
+
+        if new_status == RequestStatus.VERIFIED:
+            latest = self.latest_verification
+            if not latest or latest.decision != "verified":
+                raise ValidationError("Record an authorized verification before advancing this request.")
+        if new_status in (RequestStatus.ASSIGNED, RequestStatus.IN_PROGRESS, RequestStatus.DELIVERED):
+            if not delivery:
+                raise ValidationError("Assign a support pledge before advancing this request.")
+        if new_status == RequestStatus.DELIVERED and not (
+            delivery.delivered_at and delivery.recipient_name.strip() and delivery.confirmation_note.strip()
+        ):
+            raise ValidationError("Record the recipient and hand-over confirmation before marking delivery complete.")
+        if new_status == RequestStatus.CLOSED and not (
+            delivery and delivery.recipient_confirmed_at and delivery.confirmed_by_id
+        ):
+            raise ValidationError("Recipient confirmation is required before closing this request.")
+
+    def acknowledge(self, by, at=None):
+        """A review is meaningful staff action even when it asks for more information."""
+        if not by.can_coordinate:
+            raise PermissionDenied("Only authorized staff can acknowledge requests.")
+        with transaction.atomic():
+            current = type(self).objects.select_for_update().get(pk=self.pk)
+            fields = ["updated_at"]
+            if current.acknowledged_at is None:
+                current.acknowledged_at = at or timezone.now()
+                fields.append("acknowledged_at")
+            models.Model.save(current, update_fields=fields)
+            self.acknowledged_at = current.acknowledged_at
+            self.updated_at = current.updated_at
 
     def transition_to(self, new_status, by=None, note=""):
-        """Move the request along the lifecycle and timestamp the transition."""
-        previous = self.status
-        if previous == new_status:
-            return None
+        """Lock the current row and commit the status and audit event together."""
+        with transaction.atomic():
+            current = type(self).objects.select_for_update().get(pk=self.pk)
+            current.validate_transition(new_status, by)
+            if current.status == new_status:
+                self.status = current.status
+                return None
+            event = StatusEvent.objects.create(
+                request=current,
+                from_status=current.status,
+                to_status=new_status,
+                changed_by=by,
+                note=note,
+            )
+            current.status = new_status
+            fields = ["status", "updated_at"]
+            if current.acknowledged_at is None:
+                current.acknowledged_at = event.changed_at
+                fields.append("acknowledged_at")
+            if new_status == RequestStatus.CLOSED:
+                current.closed_at = event.changed_at
+                fields.append("closed_at")
+            models.Model.save(current, update_fields=fields)
+            for field in ("status", "acknowledged_at", "closed_at", "updated_at"):
+                setattr(self, field, getattr(current, field))
+            self._prefetched_objects_cache = {}
+            return event
 
-        now = timezone.now()
-        self.status = new_status
-        fields = ["status", "updated_at"]
+    @property
+    def latest_verification(self):
+        return next(iter(self.verifications.all()), None)
 
-        if self.acknowledged_at is None and new_status != RequestStatus.RECEIVED:
-            self.acknowledged_at = now
-            fields.append("acknowledged_at")
-        if new_status == RequestStatus.CLOSED:
-            self.closed_at = now
-            fields.append("closed_at")
-
-        super().save(update_fields=fields)
-        return StatusEvent.objects.create(
-            request=self,
-            from_status=previous,
-            to_status=new_status,
-            changed_by=by,
-            note=note,
-        )
+    @property
+    def verification_state(self):
+        latest = self.latest_verification
+        return latest.decision if latest else "pending"
 
     # --- Lifecycle helpers used by the UI -----------------------------------
     @property

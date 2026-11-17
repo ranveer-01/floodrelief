@@ -1,0 +1,13 @@
+<section class="workspace-section">
+  <div class="workspace-section__head"><h2>Ready for review</h2><a class="workspace-link" href="{% url 'verification:queue' %}">Open full queue →</a></div>
+  <div class="workspace-grid">{% for relief_request in review_requests %}{% include "partials/request_summary.html" with action_label='Review request' %}{% empty %}<div class="workspace-empty workspace-empty--panel"><h3>The first-review queue is clear.</h3><p>Open the full queue to follow requests awaiting additional information.</p></div>{% endfor %}</div>
+</section>
+<section class="workspace-section">
+  <div class="workspace-section__head"><h2>Ready for assignment</h2><a class="workspace-link" href="{% url 'dashboard:activity' %}?kind=requests&amp;status=verified&amp;scope=all">View verified requests →</a></div>
+  <div class="workspace-grid">{% for relief_request in available_requests %}{% include "partials/request_summary.html" with action_label='Review support & assign' %}{% empty %}<div class="workspace-empty workspace-empty--panel"><h3>No verified requests are awaiting assignment.</h3><p>Requests appear here after verification and before a support pledge is assigned.</p></div>{% endfor %}</div>
+</section>
+<section class="workspace-section">
+  <div class="workspace-section__head"><h2>Active deliveries</h2><a class="workspace-link" href="{% url 'dashboard:activity' %}?kind=deliveries&amp;scope=all">View all deliveries →</a></div>
+  <div class="workspace-grid">{% for delivery in deliveries %}{% include "partials/delivery_card.html" %}{% empty %}<div class="workspace-empty workspace-empty--panel"><h3>No active deliveries.</h3><p>Assigned support will appear here until receipt is confirmed.</p></div>{% endfor %}</div>
+</section>
+{% include "partials/operations_summary.html" %}

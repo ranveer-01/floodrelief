@@ -73,6 +73,8 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
+                "apps.dashboard.context_processors.notification_count",
+                "apps.dashboard.context_processors.platform_settings",
             ],
         },
     },
@@ -91,7 +93,8 @@ AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
 ]
 
-LOGIN_URL = "/admin/login/"
+LOGIN_URL = "users:login"
+LOGIN_REDIRECT_URL = "dashboard:home"
 
 # --- Internationalisation ---------------------------------------------------
 LANGUAGE_CODE = "en-us"
@@ -117,3 +120,6 @@ MESSAGE_TAGS = {message_constants.ERROR: "error"}
 # --- Project-specific -------------------------------------------------------
 # Proposal metric: relief requests should be acknowledged within 2 hours.
 ACKNOWLEDGEMENT_TARGET_HOURS = int(env("ACKNOWLEDGEMENT_TARGET_HOURS", 2))
+
+ENABLE_IN_APP_NOTIFICATIONS = env_bool("ENABLE_IN_APP_NOTIFICATIONS", True)
+GOOGLE_MAPS_API_KEY = env("GOOGLE_MAPS_API_KEY", "")

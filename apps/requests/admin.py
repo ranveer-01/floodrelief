@@ -1,11 +1,11 @@
 """
-Admin = the NGO coordination desk for this milestone.
+The coordination desk retains records and links to the authorized workflow.
 
-Status changes made here go through `ReliefRequest.transition_to()`, so the
-audit trail and the acknowledgement timestamp stay correct no matter whether a
-row is edited in the form or bulk-updated with an action.
+Status is read-only here; review, assignment, and delivery actions collect the
+records required by the lifecycle services.
 """
 from django.contrib import admin, messages
+from django.core.exceptions import PermissionDenied, ValidationError
 from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 from django.utils.timesince import timesince
@@ -83,13 +83,16 @@ class ReliefRequestAdmin(admin.ModelAdmin):
         "closed_at",
         "ack_display",
         "progress_bar",
+        "status",
+        "workflow_link",
+        "request_evidence",
     )
 
     fieldsets = (
-        ("Traceability", {"fields": ("reference", "id", "progress_bar", "status")}),
+        ("Traceability", {"fields": ("reference", "id", "progress_bar", "status", "workflow_link")}),
         (
             "Request",
-            {"fields": ("category", "urgency", "people_affected", "location", "description")},
+            {"fields": ("category", "urgency", "people_affected", "location", "public_area", "latitude", "longitude", "description", "request_evidence")},
         ),
         ("Requester", {"fields": ("submitted_by", "contact_name", "contact_phone")}),
         (
@@ -106,13 +109,26 @@ class ReliefRequestAdmin(admin.ModelAdmin):
         ),
     )
 
-    actions = (
-        "action_verify",
-        "action_assign",
-        "action_in_progress",
-        "action_deliver",
-        "action_close",
-    )
+    actions = ("action_verify",)
+
+    @admin.display(description="Supporting evidence")
+    def request_evidence(self, obj):
+        if not obj.supporting_evidence:
+            return "No evidence supplied."
+        from django.urls import reverse
+
+        return format_html('<a href="{}">Download request evidence</a>', reverse("requests:evidence", kwargs={"pk": obj.pk}))
+
+    @admin.display(description="Request workflow")
+    def workflow_link(self, obj):
+        if obj._state.adding:
+            return "Save this request to open its workflow."
+        from django.urls import reverse
+
+        return format_html('<a href="{}">Review, assign support, or confirm delivery →</a>', reverse("requests:detail", kwargs={"pk": obj.pk}))
+
+    def has_delete_permission(self, request, obj=None):
+        return False
 
     # --- Display helpers ----------------------------------------------------
     @admin.display(description="status", ordering="status")
@@ -179,52 +195,22 @@ class ReliefRequestAdmin(admin.ModelAdmin):
             mark_safe("".join(chunks)),  # each chunk was built with format_html
         )
 
-    # --- Keep transitions auditable ----------------------------------------
-    def save_model(self, request, obj, form, change):
-        if change and "status" in form.changed_data:
-            previous = ReliefRequest.objects.get(pk=obj.pk).status
-            new_status = obj.status
-            obj.status = previous  # transition_to() writes the change itself
-            obj.transition_to(new_status, by=request.user, note="Updated from the admin.")
-            # Persist any other edits made on the same form submission.
-            super().save_model(request, obj, form, change)
-            return
-        super().save_model(request, obj, form, change)
-
-    def _bulk_transition(self, request, queryset, status):
-        moved = 0
-        for relief_request in queryset:
-            if relief_request.transition_to(
-                status, by=request.user, note="Bulk update from the admin."
-            ):
-                moved += 1
-        label = RequestStatus(status).label
-        self.message_user(
-            request,
-            f"{moved} request(s) moved to “{label}”. "
-            f"{queryset.count() - moved} were already there.",
-            messages.SUCCESS,
-        )
-
+    # Assignment and delivery use the dedicated forms to collect required records.
     @admin.action(description="Mark selected as Verified")
     def action_verify(self, request, queryset):
-        self._bulk_transition(request, queryset, RequestStatus.VERIFIED)
+        from apps.verification.services import review_request
 
-    @admin.action(description="Mark selected as Assigned")
-    def action_assign(self, request, queryset):
-        self._bulk_transition(request, queryset, RequestStatus.ASSIGNED)
-
-    @admin.action(description="Mark selected as In progress")
-    def action_in_progress(self, request, queryset):
-        self._bulk_transition(request, queryset, RequestStatus.IN_PROGRESS)
-
-    @admin.action(description="Mark selected as Delivered")
-    def action_deliver(self, request, queryset):
-        self._bulk_transition(request, queryset, RequestStatus.DELIVERED)
-
-    @admin.action(description="Mark selected as Closed")
-    def action_close(self, request, queryset):
-        self._bulk_transition(request, queryset, RequestStatus.CLOSED)
+        if not request.user.can_coordinate:
+            raise PermissionDenied("Only authorized staff can verify requests.")
+        moved = 0
+        for relief_request in queryset:
+            try:
+                review_request(relief_request.pk, by=request.user, decision="verified", method="document",
+                               notes="Verified by authorized staff from the coordination desk.")
+            except ValidationError:
+                continue
+            moved += 1
+        self.message_user(request, f"{moved} request(s) verified; {queryset.count() - moved} already beyond review.", messages.SUCCESS)
 
 
 @admin.register(StatusEvent)
@@ -239,4 +225,7 @@ class StatusEventAdmin(admin.ModelAdmin):
         return False
 
     def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
         return False

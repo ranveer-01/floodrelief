@@ -1,0 +1,18 @@
+{% if request.user.can_view_accounts %}
+  <section class="workspace-section">
+    <div class="workspace-section__head"><h2>Donor approvals</h2><a class="workspace-link" href="{% url 'users:manage_accounts' %}">Review accounts →</a></div>
+    <div class="workspace-list">
+      {% for account in pending_donors %}<article class="workspace-row"><div><strong>{{ account.name }}</strong><p>{{ account.email }}</p><span>Joined {{ account.created_at|date:'d M Y' }}</span></div><a class="btn btn--quiet btn--compact" href="{% url 'users:manage_accounts' %}?q={{ account.email|urlencode }}">Review account →</a></article>{% empty %}<div class="workspace-empty"><h3>No donor approvals are waiting.</h3><p>New donor registrations will appear here for review.</p></div>{% endfor %}
+    </div>
+  </section>
+  <section class="workspace-section">
+    <div class="workspace-section__head"><h2>Account administration</h2></div>
+    <div class="workspace-grid">
+      <article class="workspace-panel workspace-action-card">{% include "partials/icon.html" with name='people' %}<h3>Accounts &amp; approvals</h3><p>Find accounts, review pending donors and check who can offer support.</p><a class="workspace-link" href="{% url 'users:manage_accounts' %}?status=all">Manage accounts →</a></article>
+      {% if perms.users.view_role or perms.users.change_role %}<article class="workspace-panel workspace-action-card">{% include "partials/icon.html" with name='settings' %}<h3>Roles &amp; access</h3><p>Manage role definitions and account permissions in the administration desk.</p><a class="workspace-link" href="{% url 'admin:users_user_changelist' %}">Open administration →</a></article>{% endif %}
+    </div>
+  </section>
+{% else %}
+  <div class="workspace-notice"><strong>Account administration needs additional permission.</strong><p>Your account can oversee relief operations. A user-management permission is required to view accounts or approve donors.</p></div>
+{% endif %}
+{% include "partials/operations_summary.html" %}

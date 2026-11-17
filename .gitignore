@@ -14,6 +14,7 @@ env/
 *.sqlite3-journal
 /staticfiles/
 /media/
+/.local/
 *.log
 
 # Environment

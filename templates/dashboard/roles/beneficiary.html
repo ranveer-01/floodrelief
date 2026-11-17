@@ -1,0 +1,8 @@
+<section class="workspace-section">
+  <div class="workspace-section__head"><h2>Your requests</h2><a class="workspace-link" href="{% url 'dashboard:activity' %}?kind=requests">View all requests →</a></div>
+  <div class="workspace-grid">
+    {% for relief_request in my_requests %}{% include "partials/request_summary.html" %}
+    {% empty %}<div class="workspace-empty workspace-empty--panel">{% include "partials/icon.html" with name='plus' %}<h3>Your first request starts here.</h3><p>Tell the relief team what you need. Your reference, review updates and delivery timeline will appear in this workspace.</p><a class="btn btn--accent btn--compact" href="{% url 'requests:create' %}">Request help →</a></div>{% endfor %}
+  </div>
+</section>
+<div class="workspace-notice workspace-notice--guide"><strong>Follow the next step in your request.</strong><p>If staff need more information, respond from the request page. After delivery, confirm receipt once the promised support has reached you.</p></div>

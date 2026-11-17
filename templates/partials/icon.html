@@ -1,0 +1,22 @@
+{% comment %}Decorative line icons. Adjacent text supplies the accessible name.{% endcomment %}
+<svg class="icon{% if icon_class %} {{ icon_class }}{% endif %}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+  {% if name == 'dashboard' %}<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>
+  {% elif name == 'activity' %}<path d="M8 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2h-3"/><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M7 11h10M7 16h7"/>
+  {% elif name == 'bell' %}<path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/>
+  {% elif name == 'check' %}<path d="m8 12 3 3 5-6"/><path d="m12 2 8 4v6c0 5-8 10-8 10S4 17 4 12V6z"/>
+  {% elif name == 'support' %}<path d="M12 20s-8-5-8-11a4 4 0 0 1 8-1 4 4 0 0 1 8 1c0 6-8 11-8 11Z"/>
+  {% elif name == 'board' %}<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16M3 10h18M14 14h3M14 17h3"/>
+  {% elif name == 'map' %}<path d="m3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3V6ZM9 3v15M15 6v15"/>
+  {% elif name == 'pin' %}<path d="M19 10c0 5-7 11-7 11S5 15 5 10a7 7 0 1 1 14 0Z"/><circle cx="12" cy="10" r="2.5"/>
+  {% elif name == 'plus' %}<path d="M12 5v14M5 12h14"/>
+  {% elif name == 'menu' %}<path d="M4 6h16M4 12h16M4 18h16"/>
+  {% elif name == 'chevron' %}<path d="m6 9 6 6 6-6"/>
+  {% elif name == 'arrow' %}<path d="M5 12h14m-5-5 5 5-5 5"/>
+  {% elif name == 'logout' %}<path d="M9 4H4v16h5M9 12h12m-4-4 4 4-4 4"/>
+  {% elif name == 'people' %}<circle cx="9" cy="7" r="3"/><path d="M3 20v-3a6 6 0 0 1 12 0v3M16 4a3 3 0 0 1 0 6M21 20v-3a6 6 0 0 0-4-5"/>
+  {% elif name == 'truck' %}<path d="M3 6h11v11H3zM14 10h4l3 4v3h-7"/><circle cx="7" cy="18" r="2"/><circle cx="18" cy="18" r="2"/>
+  {% elif name == 'settings' %}<path d="M4 6h16M4 12h16M4 18h16"/><circle cx="8" cy="6" r="2"/><circle cx="16" cy="12" r="2"/><circle cx="10" cy="18" r="2"/>
+  {% elif name == 'clock' %}<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>
+  {% elif name == 'close' %}<path d="m6 6 12 12M6 18 18 6"/>
+  {% else %}<circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7h.01"/>{% endif %}
+</svg>

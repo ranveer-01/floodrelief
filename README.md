@@ -1,215 +1,247 @@
 # FloodRelief Connect
 
-A web platform that gives flood relief requests **one traceable record** instead
-of scattering them across phone calls, WhatsApp groups, and paper forms.
+A Django platform for one traceable flood-relief record:
+**Received → Verified → Assigned → In progress → Delivered → Closed**.
 
-Every request gets a reference code the moment it arrives, then moves through a
-six-stage lifecycle where **each transition is timestamped and kept**:
+Built against [the project proposal](docs/floodrelief-proposal.pdf) by Ranveer
+Singh (1024170100), Manshaan Singh (1024170110), and Jaskanwardeep Singh
+(1024170093), submitted to Sandeep Kaur.
 
-```
-Received → Verified → Assigned → In Progress → Delivered → Closed
-```
+The core workflow and supporting visibility features are implemented. See
+[the project plan and consecutive work log](docs/PROJECT_PROGRESS.md) for the
+current checkpoint and next work, and [the test report](docs/TEST_REPORT.md)
+for verified behavior and remaining pilot checks.
 
-Semester software project by **Ranveer Singh** (1024170100) and **Manshaan
-Singh** (1024170110), submitted to Sandeep Kaur. Built against
-`docs/floodrelief-proposal.pdf`.
+For a detailed explanation of the technologies, folders, files and how they
+work together, read [the project guide](docs/PROJECT_GUIDE.md).
 
----
+## Run locally on Windows
 
-## The primary metric
+Python 3.13 is the development baseline; the existing environment uses Django
+5.2.17. Run these commands from the project folder in PowerShell:
 
-The proposal names one headline measure:
-
-> The primary evaluation measure will be **time to acknowledgement /
-> verification**, calculated from the request-submission timestamp to the first
-> meaningful staff action. A pilot target will be a **median acknowledgement
-> time of less than two hours**.
-
-That is implemented literally, not decoratively:
-
-- `submitted_at` is stamped on creation; `acknowledged_at` is stamped on the
-  first transition *away from* `received` — i.e. the first meaningful staff
-  action, exactly as defined above.
-- `ReliefRequestQuerySet.acknowledgement_stats()` reports the **median** (not
-  the mean — one stale request shouldn't be hidden by averaging), the
-  within-target percentage, and how many are currently breaching.
-- The target is configurable: `ACKNOWLEDGEMENT_TARGET_HOURS`, default `2`.
-- Those numbers are on the landing page and the board, and every card shows its
-  own acknowledgement delta colour-coded good / late / overdue / waiting.
-
----
-
-## Quick start
-
-Requires Python 3.13 (developed on 3.13.2 with Django 5.2.17).
-
-```bash
+~~~powershell
 python -m venv .venv
-source .venv/Scripts/activate     # Windows bash; use .venv\Scripts\activate on cmd
-                                  # macOS/Linux: source .venv/bin/activate
-pip install -r requirements.txt
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+if (-not (Test-Path -LiteralPath .env)) {
+    Copy-Item -LiteralPath .env.example -Destination .env
+}
+.\.venv\Scripts\python.exe manage.py migrate
+.\.venv\Scripts\python.exe manage.py seed_demo
+.\.venv\Scripts\python.exe manage.py runserver
+~~~
 
-cp .env.example .env              # dev defaults work as-is
+Open <http://127.0.0.1:8000/>. If the environment already exists, skip creating
+it and retain the existing `.env` and database.
 
-python manage.py migrate
-python manage.py seed_demo        # 4 roles, a demo NGO user, 9 realistic requests
-python manage.py createsuperuser  # prompts for email + name (there is no username)
-python manage.py runserver
-```
+On macOS/Linux, create and activate `.venv`, then use `python manage.py ...`.
+For a real administrator account, run `python manage.py createsuperuser`.
 
-Then open <http://127.0.0.1:8000/>.
+### Demonstration accounts
 
-`seed_demo` backdates its timestamps, so the median-acknowledgement figure is a
-real calculation over spread-out data rather than a hardcoded number. Re-run
-with `--fresh` to wipe and rebuild the demo rows.
+All four demonstration accounts use password **`floodrelief`**. The seed command
+is restricted to `DEBUG=True` and preserves existing account passwords.
 
-It also creates a demo NGO staff login: **`staff@floodrelief.test`** /
-**`floodrelief`** (dev only — the account is pointless in production).
-
-### Pages
-
-| URL | What it is |
+| Account | Role |
 | --- | --- |
-| `/` | Landing — the problem, the lifecycle, live metrics |
-| `/requests/new/` | Submit a relief request |
-| `/requests/` | The board: every request, filterable, with live timestamps |
-| `/admin/` | Coordination desk — verify, assign, deliver, close |
+| `victim@floodrelief.test` | Beneficiary: submit, respond to reviews, confirm receipt |
+| `donor@floodrelief.test` | Approved donor: pledge support and update assigned deliveries |
+| `staff@floodrelief.test` | NGO staff: verify, assign, coordinate, confirm phone entries |
+| `admin@floodrelief.test` | Administrator: account oversight, donor approvals, and relief operations overview |
 
----
+`seed_demo` creates nine fictional requests with meaningful backdated timestamps
+and linked review, support, and delivery records. Re-running it is idempotent.
+It enriches matching older sample rows while retaining their references and
+status history. `seed_demo --fresh` rebuilds **matching sample requests only**;
+other requests and accounts are retained.
 
-## The demo flow
+## Complete demonstration flow
 
-1. Start at `/` — the metric strip is reading the real database.
-2. **Submit a request** → fill the form → submit. The button locks and stamps
-   the send time.
-3. You land on `/requests/`, scrolled to your new request, which arrives with a
-   *Just submitted* flag and an animated status tracker at **Received**.
-4. Open **Audit trail** on the card — one event, timestamped, `→ Received`.
-5. Go to `/admin/requests/reliefrequest/`, open that same row (same reference
-   code), change status to **Verified**, save.
-6. Back on `/requests/`: the tracker has advanced, and *Time to
-   acknowledgement* has switched from waiting to a real duration. The audit
-   trail now has two events, the second attributed to your admin user.
+1. Sign in as the beneficiary and submit a request. Open **Add optional
+   information** for evidence or map coordinates; these can be left empty.
+   The reference and first audit event appear
+   immediately in the request workspace.
+2. Sign in as staff, open the verification queue, and record a verified decision
+   with the method and notes. Rejected and more-information decisions remain in
+   review history; a beneficiary can respond to a more-information review.
+3. Sign in as the approved donor, browse verified requests, and offer goods,
+   transport, or an INR funds pledge.
+4. Staff open that request and assign one available pledge to its responder.
+5. The assigned responder starts delivery, then records the recipient and
+   hand-over confirmation. A JPEG, PNG, or PDF proof is optional.
+6. The beneficiary confirms receipt with the checkbox and notes. Staff can
+   record the recipient's phone/in-person confirmation for anonymous requests.
+   Closure requires this confirmation.
 
-Step 6 is the point of the project: the status did not just change, the
-**change itself was recorded**.
+The request has six timestamped lifecycle events. The selected pledge becomes
+delivered, review history remains available, and account notifications record
+the relevant updates. One pledge is assigned as the lead delivery for a request;
+additional offers stay recorded and can be withdrawn while unassigned. Funds
+are recorded as pledges; the platform does not collect payments.
 
----
+### Account approvals
 
-## Data model
+Public registration offers beneficiary and donor roles. A new donor keeps a
+support dashboard with a clear pending-approval message. An authorized
+administrator opens **Manage accounts**, reviews **Pending donors** at
+`/accounts/manage/`, and selects **Approve donor**. The existing **Support
+approved** control in `/admin/users/user/` remains available.
 
-`apps/users/`
+Account oversight requires an active account with `is_staff` and
+`users.view_user` or `users.change_user`; approval requires
+`users.change_user`. A role label alone does not grant account-management
+permissions. Superusers have the required permissions.
 
-- **`Role`** — uuid pk, name (`victim` / `donor` / `ngo_staff` / `admin`),
-  description. The four actors from the use-case diagram.
-- **`User`** — uuid pk, name, email (the login field — no username), phone,
-  role FK, `created_at`, plus the standard active/staff flags. Custom
-  `AbstractBaseUser` with `UserManager`, wired up as `AUTH_USER_MODEL`.
+Administrators create staff accounts with the NGO staff or administrator role.
+Those roles grant relief coordination permissions. Django admin access also
+requires `is_staff` and the relevant Django permissions, or a superuser account.
 
-`apps/requests/`
+Anonymous submissions remain supported: keep the reference, track the public
+status, and coordinate with staff by phone. Signing in before submission links
+the request to the beneficiary's private dashboard and review-response forms.
 
-- **`ReliefRequest`** — uuid pk, `reference`, `submitted_by` FK, category,
-  description, location, urgency, status, `contact_name`, `contact_phone`,
-  `people_affected`, `submitted_at`, `updated_at`, `acknowledged_at`,
-  `closed_at`.
-- **`StatusEvent`** — one row per lifecycle transition: `from_status`,
-  `to_status`, `changed_by`, `note`, `changed_at`. Append-only in practice;
-  read-only in the admin.
+## Pages
 
-### Fields beyond the class diagram
-
-The class diagram lists `ReliefRequest` as id / submittedBy / category /
-description / location / urgency / status / submittedAt. The additions all come
-from the proposal body rather than from invention:
-
-| Added | Why |
+| URL | Purpose |
 | --- | --- |
-| `reference` | The proposal's week 3–4 deliverable is "request ID generation", and §3.3 says a victim "receives a unique request ID". Format `FRC-XXX-XXX`, generated from an unambiguous alphabet (no `O`/`0`/`I`/`1`) so it survives being read aloud over a phone. |
-| `StatusEvent` model | §3.3: "Each transition will be recorded in the status history so that the system can reconstruct what happened and when." Week 5–6 deliverable is literally "status history". |
-| `contact_name`, `contact_phone` | §3.2 lists "contact information" in the relief-request module. Required, so a request submitted by an unauthenticated victim is still reachable. |
-| `acknowledged_at` | Needed to compute the proposal's own primary metric. |
-| `closed_at`, `updated_at` | Closure timestamp for lifecycle reporting; `updated_at` for ordinary change tracking. |
-| `people_affected` | Our own addition — triage needs scale, not just urgency. The one field here with no line in the proposal behind it. |
+| `/` | Landing page and real acknowledgement statistics |
+| `/accounts/register/`, `/accounts/login/` | Registration and email login |
+| `/accounts/manage/` | Authorized account oversight and donor approval |
+| `/dashboard/` | Distinct beneficiary, donor, NGO, and administrator workspaces |
+| `/dashboard/activity/` | Complete paginated records with role-specific defaults |
+| `/dashboard/notifications/` | Private inbox with unread/read controls |
+| `/requests/new/` | Relief request submission |
+| `/requests/` | Public status board with filters and audit timestamps |
+| `/requests/<uuid>/` | Authorized request workflow and private records |
+| `/verification/` | Staff-only review queue, oldest/most urgent first |
+| `/support/` | Verified requests awaiting support |
+| `/map/` | Public approximate-area map and working area-list fallback |
+| `/admin/` | User management and retained workflow records |
 
-### One write path
+Beneficiary activity opens personal requests; donor activity opens personal
+pledges. NGO staff and administrators start with **All operations** and can
+switch to **My records**. Other users always see their own records, even if an
+operations scope is added to the URL.
 
-Status is only ever changed through `ReliefRequest.transition_to(new_status,
-by=..., note=...)`, which stamps the clock, sets `acknowledged_at` on first
-action, and appends the `StatusEvent`. The admin's `save_model` and all five
-bulk actions route through it, so **the audit trail cannot be bypassed by
-editing through the admin** — verified by test.
+Beneficiary dashboards focus on requests, review responses and receipt
+confirmation. Donors see verified needs, their pledges and assigned deliveries.
+NGO staff see the review queue, assignment priorities and delivery coordination.
+Administrators see account summaries, donor approvals and operations oversight.
 
----
+## Workflow rules and privacy
 
-## Project layout
+Status transitions commit the request and its audit event together. Services
+collect the supporting records, check roles, lock the current request row, and
+enforce the stage order. Admin status fields and retained review/support/delivery
+records are read-only; workflow links and the authorized verification action
+use the services.
 
-```
-config/settings/     base.py, dev.py, production.py
-apps/users/          custom user + roles                     [built]
-apps/requests/       lifecycle, board, submission form        [built]
-apps/dashboard/      landing page + live metrics              [built]
-apps/verification/   reviewer queue                           [milestone 2]
-apps/donations/      donor pledges against verified requests  [milestone 2]
-apps/delivery/       assignment + proof of delivery           [milestone 2]
-templates/           base.html, partials/, per-app templates
-static/css/          base, components, landing, form, board
-static/js/           motion.js, form.js, board.js
-docs/                proposal PDF + diagrams/
-```
+| Viewer | Visible information |
+| --- | --- |
+| Public | Reference, category, public district/town, urgency, scale, status, timestamps |
+| Beneficiary | Own private description, contacts, evidence, review history and confirmation |
+| Approved donor | Verified needs, own pledges, and assigned delivery records |
+| Assigned responder | Delivery contact details and proof for the assigned request |
+| Authorized staff | Review queue, private evidence, coordination actions and operations records |
 
-The three milestone-2 apps are registered and migration-ready but hold only a
-docstring describing their scope. Verification and delivery are both *usable*
-today through the admin — those apps add the dedicated staff screens. This
-mirrors the proposal's own instruction to get the minimum end-to-end workflow
-stable before adding modules.
+Public cards and search do not expose free-text descriptions, detailed addresses,
+contact names/phones, review notes, or original attachments. Review evidence is
+limited to its requester and staff. Delivery proof is limited to the requester,
+assigned responder, and staff. Private files use authenticated attachment routes;
+the project does not publish `/media/` as a public route.
 
----
+Uploads are optional and validated for a 5 MB maximum, JPEG/PNG/PDF extension,
+and matching file signature. Staff duplicate suggestions compare category and
+location; they never reject automatically.
 
-## Frontend
+### Primary evaluation metric
 
-Plain HTML, CSS, and JavaScript. No React, no Bootstrap, no CSS framework, no
-build step — what's in `static/` is what the browser gets.
+`acknowledged_at` records the **first meaningful staff review**, including a
+rejection or request for more information. Subsequent reviews and delivery stages
+do not reset it. The metric measures minutes from submission to that first
+action; the headline is the median, with within-target and overdue counts.
 
-- Custom design tokens in `static/css/base.css`; layouts are 12-column CSS Grid,
-  deliberately asymmetric rather than centred cards.
-- Type: Fraunces (display) / Archivo (body) / JetBrains Mono — every timestamp
-  and reference code is monospaced, because they're data.
-- Motion is 150–400 ms and cheap: `IntersectionObserver` reveals,
-  `requestAnimationFrame`-throttled scroll, CSS transforms only. Everything is
-  wrapped in `prefers-reduced-motion` guards, and the pages work fully with
-  JavaScript disabled (`.no-js` draws the trackers in place).
-- Timestamps show the absolute stamp *and* a live relative suffix, refreshed
-  every 30 s. The absolute value is never replaced.
-- Photography is real disaster-response work, credited with licences in
-  **`static/images/CREDITS.md`**. Each photo sits under a duotone scrim with a
-  gradient fallback, so a missing image degrades to a deliberate colour field.
+`ACKNOWLEDGEMENT_TARGET_HOURS` defaults to `2`. The proposal's pilot target is
+a median below two hours. Fictional seed data and automated checks demonstrate
+the calculation; they are not a completed pilot.
 
----
+Staff dashboards also measure the percentage of delivered support records with
+recipient confirmation.
 
-## Production
+### Supporting features
 
-`config/settings/production.py` refuses to start on a missing, empty, or
-dev-placeholder `SECRET_KEY`, or with an empty `ALLOWED_HOSTS` — a loud failure
-beats silently serving with a known key. It switches to PostgreSQL, inserts
-WhiteNoise, turns on HSTS / secure cookies / referrer policy, and uses
-`CompressedManifestStaticFilesStorage`.
+In-app notifications cover review decisions, support offers, assignments,
+delivery stages, and donor approval changes. Each recipient gets at most one
+notification for a given event. Delivery runs after the core transaction commits;
+notification failures are logged without undoing relief work.
 
-```bash
-export DJANGO_SETTINGS_MODULE=config.settings.production
-# set SECRET_KEY, ALLOWED_HOSTS, POSTGRES_* — see .env.example
-python manage.py migrate
-python manage.py collectstatic --noinput
-gunicorn config.wsgi:application
-```
+The board and authorized request pages check for changes every 30 seconds while
+visible. An update notice reports fresh activity and offers refresh, preserving
+any unsent form input.
 
-## Status
+To enable the interactive map, set `GOOGLE_MAPS_API_KEY` in `.env` to a browser
+key for the **Maps JavaScript API**, restricted to the intended website origins
+and API. The map loads only when requested. It shows verified active requests,
+rounds coordinates to two decimal places, and omits private text and contacts.
+The area list remains usable without a key, JavaScript, or an available maps
+service. Requests without coordinates still appear in the list.
 
-Working end to end and verified: the three pages, the submission round trip, the
-filters, the admin, `transition_to`, the audit trail surviving an admin edit, and
-`collectstatic` under production settings.
+`ENABLE_IN_APP_NOTIFICATIONS=False` disables creation of new updates while the
+relief workflow remains available. Email and SMS are future optional extensions.
 
-Not built yet: donor pledges, delivery proof upload, the dedicated verification
-queue, the Google Maps view, and notifications — all scheduled after the core
-workflow, per the proposal's phase plan. There is no automated test suite yet
-either; verification so far has been a scripted end-to-end pass, and §3.4's
-unit/integration tests are still to write.
+## Verification and project documents
+
+~~~powershell
+.\.venv\Scripts\python.exe manage.py check
+.\.venv\Scripts\python.exe manage.py makemigrations --check --dry-run
+.\.venv\Scripts\python.exe manage.py test --noinput
+~~~
+
+The suite currently has **82 passing tests**. The role/UI audit passes 98 layout
+checks and 357 alignment comparisons, followed by 11 targeted layouts and 56
+comparisons. The full authenticated workflow was repeated with real uploads,
+53 layout checks, 23 interactions, notification read actions and Maps fallback.
+Role-specific menus, permission checks, native donor approval, accessible table
+semantics and receipt links pass. See the test report for coverage and limits.
+
+- [Consecutive work log and project plan](docs/PROJECT_PROGRESS.md)
+- [Detailed project and code guide](docs/PROJECT_GUIDE.md)
+- [Test report](docs/TEST_REPORT.md)
+- [Controlled pilot plan](docs/PILOT_PLAN.md)
+- [Architecture, ER, and workflow diagrams](docs/diagrams/architecture.md)
+- [Proposal use-case mapping](docs/diagrams/README.md)
+
+The frontend uses Django templates and plain HTML/CSS/JavaScript, with no build
+step. It retains the original water/sand/amber palette, Fraunces/Archivo/
+JetBrains Mono typography, photography, wave mark, and grain. Account pages
+use a desktop sidebar and a compact native mobile menu. Cards use consistent
+heights, footers and spacing; metrics and filters align across responsive rows.
+Dashboards provide distinct role actions and summaries; submission keeps
+optional information collapsed until needed, with readable labels and linked
+error summaries.
+
+Use the normal development server with autoreloading. Restart servers started
+with `--noreload` after Python or template changes so cached templates refresh.
+Existing photography credits remain in
+[static/images/CREDITS.md](static/images/CREDITS.md).
+
+## Production setup
+
+Set `DJANGO_SETTINGS_MODULE=config.settings.production` in the process
+environment, and configure `SECRET_KEY`, `ALLOWED_HOSTS`, PostgreSQL settings,
+and HTTPS settings using `.env.example` as the reference. Production startup
+rejects a missing/development secret or empty allowed-host list.
+
+~~~powershell
+$env:DJANGO_SETTINGS_MODULE = "config.settings.production"
+.\.venv\Scripts\python.exe manage.py migrate
+.\.venv\Scripts\python.exe manage.py collectstatic --noinput
+~~~
+
+Use a production WSGI/ASGI server; Gunicorn is included for non-Windows systems.
+WhiteNoise serves collected static files. Persist and back up the database and
+private media independently.
+
+Production settings and manifest static collection have been checked locally.
+A live PostgreSQL staging run, restricted Google Maps key, real-device checks,
+and the controlled pilot remain the next validation tasks.

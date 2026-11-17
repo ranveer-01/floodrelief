@@ -1,0 +1,45 @@
+<details class="workspace-nav" open data-workspace-nav>
+  <summary class="workspace-nav__toggle">
+    {% include "partials/icon.html" with name='menu' %}
+    <span>{{ request.user.workspace_role_label }} menu</span>
+    {% if unread_notification_count %}<span class="nav-count" aria-label="{{ unread_notification_count }} unread notifications">{{ unread_notification_count }}</span>{% endif %}
+    {% include "partials/icon.html" with name='chevron' icon_class='workspace-nav__chevron' %}
+  </summary>
+  <div class="workspace-nav__body">
+    <p class="workspace-nav__heading">{{ request.user.workspace_role_label }} workspace</p>
+    <nav class="workspace-nav__links" aria-label="{{ request.user.workspace_role_label }} tasks">
+      <a href="{% url 'dashboard:home' %}" {% if page_id == 'dashboard' %}aria-current="page"{% endif %}>{% include "partials/icon.html" with name='dashboard' %}<span>{% if request.user.workspace_role == 'admin' %}Platform overview{% elif request.user.workspace_role == 'ngo_staff' %}Coordination{% elif request.user.workspace_role == 'donor' %}Donor home{% else %}Beneficiary home{% endif %}</span></a>
+      {% if request.user.workspace_role == 'admin' %}
+        {% if request.user.can_view_accounts %}<a href="{% url 'users:manage_accounts' %}" {% if page_id == 'accounts' %}aria-current="page"{% endif %}>{% include "partials/icon.html" with name='people' %}<span>Accounts &amp; approvals</span></a>{% endif %}
+        <a href="{% url 'dashboard:activity' %}?kind=requests&amp;scope=all" {% if page_id == 'activity' and kind == 'requests' %}aria-current="page"{% endif %}>{% include "partials/icon.html" with name='activity' %}<span>Relief operations</span></a>
+        <a href="{% url 'dashboard:activity' %}?kind=deliveries&amp;scope=all" {% if page_id == 'activity' and kind == 'deliveries' %}aria-current="page"{% endif %}>{% include "partials/icon.html" with name='truck' %}<span>Delivery oversight</span></a>
+        <a href="{% url 'verification:queue' %}" {% if page_id == 'verification' %}aria-current="page"{% endif %}>{% include "partials/icon.html" with name='check' %}<span>Review queue</span></a>
+      {% elif request.user.workspace_role == 'ngo_staff' %}
+        <a href="{% url 'verification:queue' %}" {% if page_id == 'verification' %}aria-current="page"{% endif %}>{% include "partials/icon.html" with name='check' %}<span>Verification queue</span></a>
+        <a href="{% url 'dashboard:activity' %}?kind=requests&amp;status=verified&amp;scope=all" {% if page_id == 'activity' and kind == 'requests' and status == 'verified' %}aria-current="page"{% endif %}>{% include "partials/icon.html" with name='support' %}<span>Assign support</span></a>
+        <a href="{% url 'dashboard:activity' %}?kind=deliveries&amp;scope=all" {% if page_id == 'activity' and kind == 'deliveries' %}aria-current="page"{% endif %}>{% include "partials/icon.html" with name='truck' %}<span>Deliveries</span></a>
+        <a href="{% url 'dashboard:activity' %}?kind=requests&amp;scope=all" {% if page_id == 'activity' and kind == 'requests' and status != 'verified' %}aria-current="page"{% endif %}>{% include "partials/icon.html" with name='activity' %}<span>All requests</span></a>
+        <a href="{% url 'requests:create' %}">{% include "partials/icon.html" with name='plus' %}<span>Record a request</span></a>
+      {% elif request.user.workspace_role == 'donor' %}
+        {% if request.user.can_support %}<a href="{% url 'donations:available' %}" {% if page_id == 'support' %}aria-current="page"{% endif %}>{% include "partials/icon.html" with name='support' %}<span>Find verified needs</span></a>
+        {% else %}<a href="{% url 'dashboard:home' %}#donor-status">{% include "partials/icon.html" with name='check' %}<span>Approval status</span></a>{% endif %}
+        <a href="{% url 'dashboard:activity' %}?kind=pledges" {% if page_id == 'activity' and kind == 'pledges' %}aria-current="page"{% endif %}>{% include "partials/icon.html" with name='activity' %}<span>Your pledges</span></a>
+        <a href="{% url 'dashboard:activity' %}?kind=deliveries" {% if page_id == 'activity' and kind == 'deliveries' %}aria-current="page"{% endif %}>{% include "partials/icon.html" with name='truck' %}<span>Your deliveries</span></a>
+      {% else %}
+        <a href="{% url 'requests:create' %}">{% include "partials/icon.html" with name='plus' %}<span>Request help</span></a>
+        <a href="{% url 'dashboard:activity' %}?kind=requests" {% if page_id == 'activity' %}aria-current="page"{% endif %}>{% include "partials/icon.html" with name='activity' %}<span>Your requests</span></a>
+      {% endif %}
+      <a href="{% url 'dashboard:notifications' %}" {% if page_id == 'notifications' %}aria-current="page"{% endif %}>{% include "partials/icon.html" with name='bell' %}<span>Notifications</span>{% if unread_notification_count %}<span class="nav-count" aria-label="{{ unread_notification_count }} unread">{{ unread_notification_count }}</span>{% endif %}</a>
+    </nav>
+    <p class="workspace-nav__heading">Community</p>
+    <nav class="workspace-nav__links" aria-label="Community relief">
+      <a href="{% url 'requests:list' %}">{% include "partials/icon.html" with name='board' %}<span>Live board</span></a>
+      <a href="{% url 'dashboard:map' %}" {% if page_id == 'map' %}aria-current="page"{% endif %}>{% include "partials/icon.html" with name='map' %}<span>Area map</span></a>
+    </nav>
+    <div class="workspace-nav__account">
+      <span class="account-avatar" aria-hidden="true">{{ request.user.get_short_name|first|upper }}</span>
+      <div><strong>{{ request.user.get_short_name }}</strong><span>{{ request.user.workspace_role_label }}</span></div>
+      <form method="post" action="{% url 'users:logout' %}">{% csrf_token %}<button type="submit">{% include "partials/icon.html" with name='logout' %}<span>Sign out</span></button></form>
+    </div>
+  </div>
+</details>

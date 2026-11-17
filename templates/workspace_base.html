@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block body_class %}page--workspace{% endblock %}
+
+{% block stylesheets %}
+  <link rel="stylesheet" href="{% static 'css/form.css' %}">
+  <link rel="stylesheet" href="{% static 'css/workspace.css' %}">
+{% endblock %}
+
+{% block content %}
+<section class="workspace">
+  <div class="workspace__inner{% if request.user.is_authenticated %} workspace__inner--with-nav{% endif %}">
+    {% if request.user.is_authenticated %}{% include "partials/workspace_nav.html" %}{% endif %}
+    <div class="workspace__content">
+      {% block workspace_content %}{% endblock %}
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block footer %}{% include "partials/workspace_footer.html" %}{% endblock %}

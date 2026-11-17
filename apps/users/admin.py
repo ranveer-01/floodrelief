@@ -34,15 +34,15 @@ class UserAdmin(BaseUserAdmin):
     form = UserEditForm
     model = User
 
-    list_display = ("email", "name", "role_badge", "is_staff", "is_active", "created_at")
-    list_filter = ("role", "is_staff", "is_superuser", "is_active")
+    list_display = ("email", "name", "role_badge", "support_approved", "is_staff", "is_active", "created_at")
+    list_filter = ("role", "support_approved", "is_staff", "is_superuser", "is_active")
     search_fields = ("email", "name", "phone")
     ordering = ("email",)
     readonly_fields = ("created_at", "last_login", "id")
 
     fieldsets = (
         (None, {"fields": ("id", "email", "password")}),
-        ("Profile", {"fields": ("name", "phone", "role")}),
+        ("Profile", {"fields": ("name", "phone", "role", "support_approved")}),
         (
             "Permissions",
             {"fields": ("is_active", "is_staff", "is_superuser", "groups", "user_permissions")},
@@ -54,7 +54,7 @@ class UserAdmin(BaseUserAdmin):
             None,
             {
                 "classes": ("wide",),
-                "fields": ("email", "name", "role", "password1", "password2"),
+                "fields": ("email", "name", "role", "support_approved", "password1", "password2"),
             },
         ),
     )

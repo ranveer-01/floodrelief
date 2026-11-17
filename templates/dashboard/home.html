@@ -1,0 +1,35 @@
+{% extends "workspace_base.html" %}
+{% block title %}{{ request.user.workspace_role_label }} dashboard — FloodRelief Connect{% endblock %}
+{% block workspace_content %}
+<header class="workspace-head workspace-head--dashboard" data-workspace-role="{{ workspace_role }}">
+  <div class="workspace-head__copy">
+    <p class="eyebrow"><span class="eyebrow__rule" aria-hidden="true"></span>{{ request.user.workspace_role_label }} dashboard</p>
+    <h1>{{ dashboard_heading }} <em>{{ dashboard_emphasis }}</em></h1>
+    <p>{{ dashboard_intro }}</p>
+  </div>
+  <div class="workspace-head__actions">
+    <a class="btn btn--accent" href="{{ primary_url }}">{% include "partials/icon.html" with name=primary_icon %}{{ primary_label }}</a>
+    <a class="btn btn--quiet" href="{{ secondary_url }}">{{ secondary_label }}</a>
+  </div>
+</header>
+
+{% include "partials/dashboard_metrics.html" with metrics=dashboard_metrics %}
+
+{% if my_request_stats.awaiting_confirmation and not request.user.can_coordinate %}
+  <section class="workspace-priority" aria-label="Your next step">
+    {% include "partials/icon.html" with name='check' %}
+    <div><strong>{{ my_request_stats.awaiting_confirmation }} request{{ my_request_stats.awaiting_confirmation|pluralize }} awaiting your confirmation</strong><p>Confirm receipt when the promised support has reached you.</p></div>
+    <a class="workspace-link" href="{% url 'dashboard:activity' %}?kind=requests&amp;status=delivered&amp;scope=mine">Check receipt →</a>
+  </section>
+{% endif %}
+
+{% if workspace_role == 'admin' %}
+  {% include "dashboard/roles/admin.html" %}
+{% elif workspace_role == 'ngo_staff' %}
+  {% include "dashboard/roles/ngo_staff.html" %}
+{% elif workspace_role == 'donor' %}
+  {% include "dashboard/roles/donor.html" %}
+{% else %}
+  {% include "dashboard/roles/beneficiary.html" %}
+{% endif %}
+{% endblock %}

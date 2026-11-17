@@ -1,0 +1,20 @@
+{% extends "workspace_base.html" %}
+{% block title %}Verification queue — FloodRelief Connect{% endblock %}
+{% block workspace_content %}
+<header class="workspace-head">
+  <p class="eyebrow"><span class="eyebrow__rule" aria-hidden="true"></span>Staff coordination</p>
+  <h1>Review the need.<br><em>Record the decision.</em></h1>
+  <p>Requests are ordered by urgency, then oldest first. Each decision and response stays in the review history.</p>
+</header>
+<nav class="workspace-filters" aria-label="Review decisions">
+  {% for value, label in decision_choices %}<a href="{% querystring decision=value page=None %}" {% if decision == value %}aria-current="page"{% endif %}>{{ label }}</a>{% endfor %}
+</nav>
+<form class="workspace-search" method="get">
+  <input type="hidden" name="decision" value="{{ decision }}">
+  <label for="review-search" class="visually-hidden">Search reference, location or requester</label>
+  <input class="field__input" id="review-search" type="search" name="q" value="{{ query }}" placeholder="Reference, location or requester">
+  <button class="btn btn--quiet" type="submit">Search</button>
+</form>
+<div class="workspace-grid">{% for relief_request in page_obj %}{% include "partials/request_summary.html" %}{% empty %}<p class="workspace-empty">No requests match this review queue.</p>{% endfor %}</div>
+{% include "partials/workspace_pagination.html" %}
+{% endblock %}
