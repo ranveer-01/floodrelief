@@ -4,6 +4,7 @@ Production settings: PostgreSQL, DEBUG off, security headers on.
 Every secret comes from the environment — nothing sensitive is committed.
 """
 from .base import *  # noqa: F401,F403
+from urllib.parse import urlparse, unquote, parse_qs
 from .base import MIDDLEWARE, env, env_bool, env_list
 
 DEBUG = False
@@ -18,15 +19,28 @@ ALLOWED_HOSTS = env_list("ALLOWED_HOSTS")
 if not ALLOWED_HOSTS:
     raise RuntimeError("ALLOWED_HOSTS must be set for production.")
 
+
+database_url = env("DATABASE_URL")
+
+if not database_url:
+    raise RuntimeError("DATABASE_URL must be set in production.")
+
+parsed = urlparse(database_url)
+query = parse_qs(parsed.query)
+
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
-        "NAME": env("POSTGRES_DB", "floodrelief"),
-        "USER": env("POSTGRES_USER", "floodrelief"),
-        "PASSWORD": env("POSTGRES_PASSWORD", ""),
-        "HOST": env("POSTGRES_HOST", "127.0.0.1"),
-        "PORT": env("POSTGRES_PORT", "5432"),
+        "NAME": unquote(parsed.path.lstrip("/")),
+        "USER": unquote(parsed.username or ""),
+        "PASSWORD": unquote(parsed.password or ""),
+        "HOST": parsed.hostname,
+        "PORT": parsed.port or 5432,
         "CONN_MAX_AGE": 60,
+        "CONN_HEALTH_CHECKS": True,
+        "OPTIONS": {
+            "sslmode": query.get("sslmode", ["require"])[0],
+        },
     }
 }
 
